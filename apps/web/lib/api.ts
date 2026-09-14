@@ -1,5 +1,6 @@
 const CORE_API_URL = process.env.NEXT_PUBLIC_CORE_API_URL ?? "http://localhost:4000";
 const AGENT_API_URL = process.env.NEXT_PUBLIC_AGENT_API_URL ?? "http://localhost:4100";
+const VOICE_API_URL = process.env.NEXT_PUBLIC_VOICE_API_URL ?? "http://localhost:4200";
 
 export interface Project {
   id: string;
@@ -42,4 +43,14 @@ export async function sendChat(message: string): Promise<string> {
   if (!res.ok) throw new Error("falha ao conversar com o Personal Agent");
   const data = (await res.json()) as { reply: string };
   return data.reply;
+}
+
+export async function speak(text: string): Promise<Blob> {
+  const res = await fetch(`${VOICE_API_URL}/speak`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) throw new Error("falha ao gerar audio (voz)");
+  return res.blob();
 }

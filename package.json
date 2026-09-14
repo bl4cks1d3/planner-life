@@ -8,7 +8,8 @@
     "dev:agent": "pnpm --filter @planner-life/agent dev",
     "dev:web": "pnpm --filter @planner-life/web dev",
     "dev:p2p": "pnpm --filter @planner-life/p2p-node dev",
-    "dev": "concurrently -n core,agent,web -c blue,green,magenta \"pnpm dev:core\" \"pnpm dev:agent\" \"pnpm dev:web\"",
+    "dev:voice": "pnpm --filter @planner-life/voice dev",
+    "dev": "concurrently -n core,agent,web,voice -c blue,green,magenta,yellow \"pnpm dev:core\" \"pnpm dev:agent\" \"pnpm dev:web\" \"pnpm dev:voice\"",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck"
   },

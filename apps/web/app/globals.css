@@ -128,3 +128,19 @@ body {
   line-height: 1.5;
   color: var(--text);
 }
+
+.speak-button {
+  margin-top: 10px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.speak-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
