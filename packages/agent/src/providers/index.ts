@@ -1,6 +1,7 @@
 import { AnthropicProvider } from "./anthropic.provider";
 import { GroqProvider } from "./groq.provider";
 import { GeminiProvider } from "./gemini.provider";
+import type { ToolRegistry } from "../tool-registry";
 import type { LlmProvider } from "./types";
 
 export type ProviderName = "groq" | "gemini" | "anthropic";
@@ -23,14 +24,14 @@ function detectProviderName(): ProviderName {
   return "groq";
 }
 
-export function createLlmProvider(): LlmProvider {
+export function createLlmProvider(registry: ToolRegistry): LlmProvider {
   switch (detectProviderName()) {
     case "groq":
-      return new GroqProvider();
+      return new GroqProvider(registry);
     case "gemini":
-      return new GeminiProvider();
+      return new GeminiProvider(registry);
     case "anthropic":
-      return new AnthropicProvider();
+      return new AnthropicProvider(registry);
   }
 }
 

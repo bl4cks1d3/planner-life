@@ -1,10 +1,13 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { createLlmProvider, type LlmProvider } from "./providers";
+import { ToolRegistry } from "./tool-registry";
 
 @Injectable()
 export class AgentService {
   private readonly logger = new Logger(AgentService.name);
   private provider: LlmProvider | undefined;
+
+  constructor(private readonly registry: ToolRegistry) {}
 
   /**
    * O provider e escolhido na primeira mensagem (nao no construtor), assim
@@ -13,7 +16,7 @@ export class AgentService {
    */
   private getProvider(): LlmProvider {
     if (!this.provider) {
-      this.provider = createLlmProvider();
+      this.provider = createLlmProvider(this.registry);
       this.logger.log(`usando provider de IA: ${this.provider.name}`);
     }
     return this.provider;

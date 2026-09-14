@@ -16,16 +16,20 @@ planner-life/
 ├── packages/
 │   ├── shared/     # Tipos e protocolo PLP (Planner Life Protocol) compartilhados
 │   ├── core/       # Planner Core: NestJS + SQLite (projetos, tarefas, memoria, eventos)
-│   ├── agent/      # Personal Agent: NestJS + Claude (tool use sobre a API do core)
+│   ├── agent/      # Personal Agent: NestJS, harness com MCP + Skills sobre Groq/Gemini/Claude
+│   │   └── skills/ # Pacotes de instrucoes (SKILL.md) carregados sob demanda
+│   ├── voice/      # TTS local em portugues (Piper) - POST /speak
 │   └── p2p-node/   # No de rede P2P (libp2p) - roda no PC e no Raspberry Pi
-└── apps/
-    └── web/        # Dashboard (Next.js) - agenda, projetos, "Planejar meu dia"
+├── apps/
+│   └── web/        # Dashboard (Next.js) - agenda, projetos, "Planejar meu dia"
+└── .mcp.json       # Servidores MCP que o Personal Agent conecta como cliente
 ```
 
 | Pacote | Stack | Porta padrao |
 | --- | --- | --- |
 | `@planner-life/core` | NestJS + `node:sqlite` | 4000 |
-| `@planner-life/agent` | NestJS + Groq/Gemini/Claude (plugavel) | 4100 |
+| `@planner-life/agent` | NestJS + Groq/Gemini/Claude (plugavel), harness MCP + Skills | 4100 |
+| `@planner-life/voice` | NestJS + Piper (TTS local, pt-BR) | 4200 |
 | `@planner-life/p2p-node` | libp2p (TCP + mDNS + gossipsub) | 15000 (TCP) |
 | `@planner-life/web` | Next.js (App Router) | 3000 |
 
@@ -82,6 +86,42 @@ web):
 pnpm --filter @planner-life/agent cli
 ```
 
+### Harness: MCP e Skills
+
+O Personal Agent nao e um tool-caller fechado -- ele e um **harness**: alem
+das ferramentas nativas do Planner Core (criar/listar tarefas e projetos,
+salvar memoria), ele pode:
+
+- **Conectar em servidores MCP externos.** Liste-os em `.mcp.json` na raiz
+  do projeto (mesmo formato do `.mcp.json` do Claude Code):
+
+  ```json
+  {
+    "mcpServers": {
+      "everything": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-everything"]
+      }
+    }
+  }
+  ```
+
+  O agente conecta em cada servidor configurado ao subir e expoe as
+  ferramentas deles pro modelo como `mcp__<servidor>__<ferramenta>`. Um
+  servidor que falha ao conectar so gera um aviso no log -- nao derruba o
+  agente.
+
+- **Carregar Skills sob demanda.** Uma skill e uma pasta em
+  `packages/agent/skills/<nome>/SKILL.md` com frontmatter (`name`,
+  `description`) e instrucoes no corpo -- o mesmo mecanismo que o Claude
+  Code usa consigo mesmo. O catalogo de skills disponiveis fica sempre no
+  system prompt; o conteudo completo so e carregado quando o modelo chama
+  a ferramenta `use_skill`. Ja vem uma skill de exemplo
+  (`revisao-semanal`).
+
+Isso vale para os tres providers (Groq, Gemini, Anthropic) igualmente --
+trocar de modelo nunca muda quais ferramentas ou skills estao disponiveis.
+
 Para subir um no P2P (no seu PC, ou copiando o pacote `p2p-node` para um
 Raspberry Pi rodando Node.js):
 
@@ -102,6 +142,9 @@ para o `p2p-node` local, propagando para os outros dispositivos.
 - [x] Personal Agent com tool-use (Groq, Gemini ou Claude -- escolhido
       automaticamente pela chave configurada) para criar/listar tarefas e
       projetos e salvar memoria, chamando a API do core
+- [x] Harness: cliente MCP (servidores externos em `.mcp.json`) + Skills
+      carregadas sob demanda (`packages/agent/skills/`)
+- [x] Voz local em portugues (Piper) com botao "Ouvir resposta" no dashboard
 - [x] Interface web minima (dashboard com agenda do dia, projetos e botao
       "Planejar meu dia")
 - [x] No P2P (libp2p) capaz de descobrir outros nos na rede local e trocar
@@ -116,7 +159,9 @@ para o `p2p-node` local, propagando para os outros dispositivos.
   rede do PC
 - Agentes especializados adicionais (Research, Study, Coding, CRM,
   Planning) como novos providers dentro de `@planner-life/agent`
-- Calendario, integracao com GitHub/e-mail, voz
+- Mais skills (a estrutura ja suporta, falta escrever as instrucoes: pesquisa,
+  faculdade, revisao de codigo...)
+- Calendario, integracao com GitHub/e-mail
 - Protocolo PLP com schema versionado e assinatura criptografica por no
   (identidade do dispositivo)
 

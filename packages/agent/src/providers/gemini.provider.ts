@@ -5,7 +5,8 @@ import {
   type FunctionDeclaration,
   type Part,
 } from "@google/generative-ai";
-import { AGENT_TOOLS, SYSTEM_PROMPT, runTool } from "../tools";
+import type { ToolRegistry } from "../tool-registry";
+import type { AgentTool } from "../tools";
 import type { LlmProvider } from "./types";
 
 // Assim como o Groq, os nomes de modelo do Gemini mudam com o tempo.
@@ -16,8 +17,8 @@ const MODEL = process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
 const MISSING_KEY_MESSAGE =
   "GEMINI_API_KEY nao configurada. Configure GROQ_API_KEY, GEMINI_API_KEY ou ANTHROPIC_API_KEY no .env (veja .env.example) e ajuste AGENT_PROVIDER se necessario.";
 
-function toGeminiTools(): FunctionDeclaration[] {
-  return AGENT_TOOLS.map((tool) => ({
+function toGeminiTools(tools: AgentTool[]): FunctionDeclaration[] {
+  return tools.map((tool) => ({
     name: tool.name,
     description: tool.description,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -30,6 +31,8 @@ export class GeminiProvider implements LlmProvider {
   private readonly logger = new Logger("GeminiProvider");
   private session: ChatSession | undefined;
 
+  constructor(private readonly registry: ToolRegistry) {}
+
   private getSession(): ChatSession {
     if (!process.env.GEMINI_API_KEY) {
       throw new InternalServerErrorException(MISSING_KEY_MESSAGE);
@@ -38,8 +41,8 @@ export class GeminiProvider implements LlmProvider {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
       const model = genAI.getGenerativeModel({
         model: MODEL,
-        systemInstruction: SYSTEM_PROMPT,
-        tools: [{ functionDeclarations: toGeminiTools() }],
+        systemInstruction: this.registry.systemPrompt(),
+        tools: [{ functionDeclarations: toGeminiTools(this.registry.list()) }],
       });
       this.session = model.startChat();
     }
@@ -62,7 +65,7 @@ export class GeminiProvider implements LlmProvider {
         this.logger.log(`ferramenta: ${call.name} ${JSON.stringify(call.args)}`);
         let toolResult: unknown;
         try {
-          toolResult = await runTool(call.name, call.args as Record<string, unknown>);
+          toolResult = await this.registry.call(call.name, call.args as Record<string, unknown>);
         } catch (err) {
           toolResult = { error: err instanceof Error ? err.message : String(err) };
         }

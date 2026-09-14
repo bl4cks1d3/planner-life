@@ -1,6 +1,7 @@
 import { InternalServerErrorException, Logger } from "@nestjs/common";
 import OpenAI from "openai";
-import { AGENT_TOOLS, SYSTEM_PROMPT, runTool } from "../tools";
+import type { ToolRegistry } from "../tool-registry";
+import type { AgentTool } from "../tools";
 import type { LlmProvider } from "./types";
 
 // Modelos do Groq mudam com frequencia (tiers gratuitos sao promovidos/
@@ -13,8 +14,8 @@ const MISSING_KEY_MESSAGE =
 
 type ChatMessage = OpenAI.Chat.Completions.ChatCompletionMessageParam;
 
-function toOpenAiTools(): OpenAI.Chat.Completions.ChatCompletionTool[] {
-  return AGENT_TOOLS.map((tool) => ({
+function toOpenAiTools(tools: AgentTool[]): OpenAI.Chat.Completions.ChatCompletionTool[] {
+  return tools.map((tool) => ({
     type: "function",
     function: {
       name: tool.name,
@@ -33,8 +34,12 @@ function toOpenAiTools(): OpenAI.Chat.Completions.ChatCompletionTool[] {
 export class GroqProvider implements LlmProvider {
   readonly name = "groq";
   private readonly logger = new Logger("GroqProvider");
-  private readonly history: ChatMessage[] = [{ role: "system", content: SYSTEM_PROMPT }];
+  private readonly history: ChatMessage[];
   private client: OpenAI | undefined;
+
+  constructor(private readonly registry: ToolRegistry) {
+    this.history = [{ role: "system", content: registry.systemPrompt() }];
+  }
 
   private getClient(): OpenAI {
     if (!process.env.GROQ_API_KEY) {
@@ -58,7 +63,7 @@ export class GroqProvider implements LlmProvider {
       const completion = await client.chat.completions.create({
         model: MODEL,
         messages: this.history,
-        tools: toOpenAiTools(),
+        tools: toOpenAiTools(this.registry.list()),
       });
 
       const message = completion.choices[0].message;
@@ -74,14 +79,14 @@ export class GroqProvider implements LlmProvider {
         let result: unknown;
         try {
           const args = call.function.arguments ? JSON.parse(call.function.arguments) : {};
-          result = await runTool(call.function.name, args);
+          result = await this.registry.call(call.function.name, args);
         } catch (err) {
           result = { error: err instanceof Error ? err.message : String(err) };
         }
         this.history.push({
           role: "tool",
           tool_call_id: call.id,
-          content: JSON.stringify(result),
+          content: typeof result === "string" ? result : JSON.stringify(result),
         });
       }
     }
