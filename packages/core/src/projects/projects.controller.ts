@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
 import { ProjectsService } from "./projects.service";
 
 @Controller("projects")
@@ -24,5 +24,15 @@ export class ProjectsController {
       throw new BadRequestException("progress deve ser um numero entre 0 e 100");
     }
     return this.projectsService.updateProgress(id, body.progress);
+  }
+
+  @Patch(":id")
+  update(@Param("id") id: string, @Body() body: { name?: string; goal?: string }) {
+    return this.projectsService.update(id, body);
+  }
+
+  @Delete(":id")
+  remove(@Param("id") id: string) {
+    return this.projectsService.remove(id);
   }
 }

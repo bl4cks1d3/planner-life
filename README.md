@@ -122,6 +122,45 @@ salvar memoria), ele pode:
 Isso vale para os tres providers (Groq, Gemini, Anthropic) igualmente --
 trocar de modelo nunca muda quais ferramentas ou skills estao disponiveis.
 
+### Google (Gmail, Calendar, Tasks -- multi-conta)
+
+O `@planner-life/core` conecta na sua conta Google via OAuth (escopos
+`gmail.readonly`, `calendar.readonly` e `tasks`) e da acesso real a:
+
+- **Inbox**: sincroniza as mensagens do Gmail pro inbox do Planner Life
+  (`GET /messages`), com leitura do corpo completo do e-mail
+  (`GET /integrations/google/gmail/:id/body`) e marcação de tratada.
+- **Agenda**: eventos de todas as agendas visiveis na conta -- a principal
+  e as compartilhadas que voce ja habilitou no Google Calendar (agenda da
+  familia inclusive) -- aparecem na view Hoje.
+- **Google Tasks**: CRUD completo (criar/listar/editar/concluir/excluir)
+  direto na view Projetos, sem copia local (sempre busca ao vivo).
+
+Configure `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no `.env` (crie um
+OAuth client em https://console.cloud.google.com/apis/credentials) e
+ative as APIs Gmail, Calendar e Tasks no mesmo projeto. Depois, clique em
+"+ Conectar conta" no dashboard (ou acesse `/integrations/google/auth`
+direto no core) -- da pra conectar **mais de uma conta Google** repetindo
+o fluxo, o Google mostra o seletor de conta a cada vez.
+
+### CRM, Estudos, Pesquisa e Habitos
+
+Alem de tarefas e projetos, o Planner Core tambem modela:
+
+- **CRM** (`/clients`): clientes/leads por estagio (lead/contato/proposta/
+  fechado), com funil calculado a partir dos dados reais.
+- **Estudos** (`/subjects`): disciplinas com progresso; as entregas
+  reaproveitam as tarefas normais (com prazo).
+- **Pesquisa** (`/research/lines`, `/research/papers`): linhas de
+  investigacao e fila de leitura de artigos.
+- **Habitos** (`/habits`): qualquer habito com meta e valor atual (agua,
+  treino, leitura...), sem widget especial hardcoded.
+
+Todos tem CRUD completo tanto pela interface web (criar/editar/excluir em
+cada view) quanto por ferramentas do Personal Agent -- peça pro agente
+"cadastra um cliente novo" ou "cria uma disciplina" que funciona igual a
+usar o formulario.
+
 Para subir um no P2P (no seu PC, ou copiando o pacote `p2p-node` para um
 Raspberry Pi rodando Node.js):
 
@@ -139,14 +178,20 @@ para o `p2p-node` local, propagando para os outros dispositivos.
 ## O que ja funciona no v0.1
 
 - [x] Planner Core com projetos, tarefas, memoria e log de eventos (SQLite local)
+- [x] CRM, Estudos, Pesquisa e Habitos como modulos reais (CRUD completo,
+      UI + ferramentas do agente)
 - [x] Personal Agent com tool-use (Groq, Gemini ou Claude -- escolhido
-      automaticamente pela chave configurada) para criar/listar tarefas e
-      projetos e salvar memoria, chamando a API do core
+      automaticamente pela chave configurada), CRUD completo em todos os
+      modulos acima
 - [x] Harness: cliente MCP (servidores externos em `.mcp.json`) + Skills
       carregadas sob demanda (`packages/agent/skills/`)
+- [x] Integracao real com Google: Gmail (inbox + leitura de e-mail),
+      Calendar (todas as agendas visiveis, incl. compartilhadas) e Tasks
+      (CRUD ao vivo) -- multi-conta
 - [x] Voz local em portugues (Piper) com botao "Ouvir resposta" no dashboard
-- [x] Interface web minima (dashboard com agenda do dia, projetos e botao
-      "Planejar meu dia")
+- [x] Dashboard completo (Next.js): Hoje, Projetos, CRM, Estudos, Pesquisa,
+      Inbox e Rede, com chat lateral e comando rapido conversando direto
+      com o Personal Agent
 - [x] No P2P (libp2p) capaz de descobrir outros nos na rede local e trocar
       eventos PLP - mesmo codigo roda no PC e no Raspberry Pi
 
@@ -161,7 +206,7 @@ para o `p2p-node` local, propagando para os outros dispositivos.
   Planning) como novos providers dentro de `@planner-life/agent`
 - Mais skills (a estrutura ja suporta, falta escrever as instrucoes: pesquisa,
   faculdade, revisao de codigo...)
-- Calendario, integracao com GitHub/e-mail
+- Integracao com GitHub
 - Protocolo PLP com schema versionado e assinatura criptografica por no
   (identidade do dispositivo)
 

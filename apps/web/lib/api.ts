@@ -11,15 +11,81 @@ export interface Project {
   updatedAt: string;
 }
 
+export type TaskStatus = "pending" | "in_progress" | "done" | "cancelled";
+
 export interface Task {
   id: string;
   title: string;
   projectId?: string;
-  status: "pending" | "in_progress" | "done" | "cancelled";
+  status: TaskStatus;
   dueAt?: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PlannerEvent {
+  id: string;
+  type: string;
+  payload: Record<string, unknown>;
+  origin: string;
+  createdAt: string;
+}
+
+export type ClientStage = "lead" | "contact" | "proposal" | "closed";
+
+export interface Client {
+  id: string;
+  name: string;
+  stage: ClientStage;
+  value: number;
+  nextAction?: string;
+  nextActionAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Subject {
+  id: string;
+  name: string;
+  progress: number;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ResearchLine {
+  id: string;
+  name: string;
+  stage?: string;
+  refs: number;
+  nextStep?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PaperStatus = "na_fila" | "em_leitura" | "resumido";
+
+export interface Paper {
+  id: string;
+  title: string;
+  source?: string;
+  status: PaperStatus;
+  researchLineId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InboxMessage {
+  id: string;
+  from: string;
+  subject: string;
+  snippet?: string;
+  tag?: string;
+  action?: string;
+  handled: boolean;
+  receivedAt: string;
+  createdAt: string;
 }
 
 export async function getProjects(): Promise<Project[]> {
@@ -32,6 +98,409 @@ export async function getTasks(): Promise<Task[]> {
   const res = await fetch(`${CORE_API_URL}/tasks`, { cache: "no-store" });
   if (!res.ok) throw new Error("falha ao buscar tarefas do Planner Core");
   return res.json();
+}
+
+export async function getEvents(limit = 20): Promise<PlannerEvent[]> {
+  const res = await fetch(`${CORE_API_URL}/events?limit=${limit}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("falha ao buscar eventos do Planner Core");
+  return res.json();
+}
+
+export async function setTaskStatus(taskId: string, status: TaskStatus): Promise<Task> {
+  const res = await fetch(`${CORE_API_URL}/tasks/${taskId}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error("falha ao atualizar tarefa");
+  return res.json();
+}
+
+export async function createTask(input: {
+  title: string;
+  projectId?: string;
+  dueAt?: string;
+  notes?: string;
+}): Promise<Task> {
+  const res = await fetch(`${CORE_API_URL}/tasks`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao criar tarefa");
+  return res.json();
+}
+
+export async function updateTask(
+  taskId: string,
+  input: { title?: string; projectId?: string | null; dueAt?: string | null; notes?: string | null }
+): Promise<Task> {
+  const res = await fetch(`${CORE_API_URL}/tasks/${taskId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao editar tarefa");
+  return res.json();
+}
+
+export async function deleteTask(taskId: string): Promise<void> {
+  const res = await fetch(`${CORE_API_URL}/tasks/${taskId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("falha ao excluir tarefa");
+}
+
+export async function createProject(input: { name: string; goal?: string }): Promise<Project> {
+  const res = await fetch(`${CORE_API_URL}/projects`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao criar projeto");
+  return res.json();
+}
+
+export async function updateProject(projectId: string, input: { name?: string; goal?: string }): Promise<Project> {
+  const res = await fetch(`${CORE_API_URL}/projects/${projectId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao editar projeto");
+  return res.json();
+}
+
+export async function deleteProject(projectId: string): Promise<void> {
+  const res = await fetch(`${CORE_API_URL}/projects/${projectId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("falha ao excluir projeto");
+}
+
+export async function getClients(): Promise<Client[]> {
+  const res = await fetch(`${CORE_API_URL}/clients`, { cache: "no-store" });
+  if (!res.ok) throw new Error("falha ao buscar clientes do CRM");
+  return res.json();
+}
+
+export async function createClient(input: {
+  name: string;
+  stage?: ClientStage;
+  value?: number;
+  nextAction?: string;
+  nextActionAt?: string;
+}): Promise<Client> {
+  const res = await fetch(`${CORE_API_URL}/clients`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao criar cliente");
+  return res.json();
+}
+
+export async function updateClient(
+  id: string,
+  input: { stage?: ClientStage; value?: number; nextAction?: string; nextActionAt?: string }
+): Promise<Client> {
+  const res = await fetch(`${CORE_API_URL}/clients/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao editar cliente");
+  return res.json();
+}
+
+export async function deleteClient(id: string): Promise<void> {
+  const res = await fetch(`${CORE_API_URL}/clients/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("falha ao excluir cliente");
+}
+
+export async function getSubjects(): Promise<Subject[]> {
+  const res = await fetch(`${CORE_API_URL}/subjects`, { cache: "no-store" });
+  if (!res.ok) throw new Error("falha ao buscar disciplinas");
+  return res.json();
+}
+
+export async function createSubject(input: { name: string; note?: string }): Promise<Subject> {
+  const res = await fetch(`${CORE_API_URL}/subjects`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao criar disciplina");
+  return res.json();
+}
+
+export async function updateSubject(id: string, input: { progress?: number; note?: string }): Promise<Subject> {
+  const res = await fetch(`${CORE_API_URL}/subjects/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao editar disciplina");
+  return res.json();
+}
+
+export async function deleteSubject(id: string): Promise<void> {
+  const res = await fetch(`${CORE_API_URL}/subjects/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("falha ao excluir disciplina");
+}
+
+export async function getResearchLines(): Promise<ResearchLine[]> {
+  const res = await fetch(`${CORE_API_URL}/research/lines`, { cache: "no-store" });
+  if (!res.ok) throw new Error("falha ao buscar linhas de pesquisa");
+  return res.json();
+}
+
+export async function createResearchLine(input: {
+  name: string;
+  stage?: string;
+  nextStep?: string;
+}): Promise<ResearchLine> {
+  const res = await fetch(`${CORE_API_URL}/research/lines`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao criar linha de pesquisa");
+  return res.json();
+}
+
+export async function updateResearchLine(
+  id: string,
+  input: { stage?: string; nextStep?: string }
+): Promise<ResearchLine> {
+  const res = await fetch(`${CORE_API_URL}/research/lines/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao editar linha de pesquisa");
+  return res.json();
+}
+
+export async function deleteResearchLine(id: string): Promise<void> {
+  const res = await fetch(`${CORE_API_URL}/research/lines/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("falha ao excluir linha de pesquisa");
+}
+
+export async function getPapers(): Promise<Paper[]> {
+  const res = await fetch(`${CORE_API_URL}/research/papers`, { cache: "no-store" });
+  if (!res.ok) throw new Error("falha ao buscar artigos");
+  return res.json();
+}
+
+export async function createPaper(input: { title: string; source?: string; researchLineId?: string }): Promise<Paper> {
+  const res = await fetch(`${CORE_API_URL}/research/papers`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao criar artigo");
+  return res.json();
+}
+
+export async function updatePaperStatus(id: string, status: PaperStatus): Promise<Paper> {
+  const res = await fetch(`${CORE_API_URL}/research/papers/${id}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error("falha ao atualizar status do artigo");
+  return res.json();
+}
+
+export async function deletePaper(id: string): Promise<void> {
+  const res = await fetch(`${CORE_API_URL}/research/papers/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("falha ao excluir artigo");
+}
+
+export async function getMessages(): Promise<InboxMessage[]> {
+  const res = await fetch(`${CORE_API_URL}/messages`, { cache: "no-store" });
+  if (!res.ok) throw new Error("falha ao buscar mensagens");
+  return res.json();
+}
+
+export async function getMessageBody(messageId: string): Promise<{ from: string; subject: string; body: string }> {
+  const res = await fetch(`${CORE_API_URL}/integrations/google/gmail/${encodeURIComponent(messageId)}/body`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error("falha ao ler o e-mail");
+  return res.json();
+}
+
+export async function setMessageHandled(messageId: string, handled: boolean): Promise<InboxMessage> {
+  const res = await fetch(`${CORE_API_URL}/messages/${messageId}/handled`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ handled }),
+  });
+  if (!res.ok) throw new Error("falha ao atualizar mensagem");
+  return res.json();
+}
+
+export interface Habit {
+  id: string;
+  name: string;
+  unit: string;
+  target: number;
+  current: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getHabits(): Promise<Habit[]> {
+  const res = await fetch(`${CORE_API_URL}/habits`, { cache: "no-store" });
+  if (!res.ok) throw new Error("falha ao buscar habitos");
+  return res.json();
+}
+
+export async function createHabit(input: { name: string; unit?: string; target?: number }): Promise<Habit> {
+  const res = await fetch(`${CORE_API_URL}/habits`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao criar habito");
+  return res.json();
+}
+
+export async function updateHabit(id: string, input: { current?: number; target?: number }): Promise<Habit> {
+  const res = await fetch(`${CORE_API_URL}/habits/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao atualizar habito");
+  return res.json();
+}
+
+export async function deleteHabit(id: string): Promise<void> {
+  const res = await fetch(`${CORE_API_URL}/habits/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("falha ao excluir habito");
+}
+
+export interface ServiceHealth {
+  core: boolean;
+  agent: boolean;
+  voice: boolean;
+}
+
+async function pingHealth(url: string): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    const res = await fetch(`${url}/health`, { cache: "no-store", signal: controller.signal });
+    clearTimeout(timeout);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function getServiceHealth(): Promise<ServiceHealth> {
+  const [core, agent, voice] = await Promise.all([
+    pingHealth(CORE_API_URL),
+    pingHealth(AGENT_API_URL),
+    pingHealth(VOICE_API_URL),
+  ]);
+  return { core, agent, voice };
+}
+
+export interface GoogleAccount {
+  email: string;
+  connectedAt: string;
+}
+
+export interface GoogleStatus {
+  connected: boolean;
+  accounts: GoogleAccount[];
+}
+
+export const GOOGLE_CONNECT_URL = `${CORE_API_URL}/integrations/google/auth`;
+
+export async function getGoogleStatus(): Promise<GoogleStatus> {
+  try {
+    const res = await fetch(`${CORE_API_URL}/integrations/google/status`, { cache: "no-store" });
+    if (!res.ok) return { connected: false, accounts: [] };
+    return res.json();
+  } catch {
+    return { connected: false, accounts: [] };
+  }
+}
+
+export async function disconnectGoogleAccount(email: string): Promise<void> {
+  await fetch(`${CORE_API_URL}/integrations/google/accounts/${encodeURIComponent(email)}`, {
+    method: "DELETE",
+  });
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: string;
+  end?: string;
+  location?: string;
+  account: string;
+  calendarName: string;
+}
+
+export async function getCalendarEvents(limit = 10): Promise<CalendarEvent[]> {
+  try {
+    const res = await fetch(`${CORE_API_URL}/integrations/google/calendar?limit=${limit}`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
+export type GoogleTaskStatus = "needsAction" | "completed";
+
+export interface GoogleTask {
+  id: string;
+  title: string;
+  notes?: string;
+  due?: string;
+  status: GoogleTaskStatus;
+  account: string;
+}
+
+export async function getGoogleTasks(): Promise<GoogleTask[]> {
+  try {
+    const res = await fetch(`${CORE_API_URL}/integrations/google/tasks`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function createGoogleTask(input: { title: string; notes?: string; due?: string }): Promise<GoogleTask> {
+  const res = await fetch(`${CORE_API_URL}/integrations/google/tasks`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao criar tarefa no Google Tasks");
+  return res.json();
+}
+
+export async function updateGoogleTask(
+  id: string,
+  input: { title?: string; notes?: string; due?: string; status?: GoogleTaskStatus }
+): Promise<GoogleTask> {
+  const res = await fetch(`${CORE_API_URL}/integrations/google/tasks/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao editar tarefa do Google Tasks");
+  return res.json();
+}
+
+export async function deleteGoogleTask(id: string): Promise<void> {
+  const res = await fetch(`${CORE_API_URL}/integrations/google/tasks/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("falha ao excluir tarefa do Google Tasks");
 }
 
 export async function sendChat(message: string): Promise<string> {

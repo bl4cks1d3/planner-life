@@ -96,3 +96,28 @@ export function updateTaskStatus(
   );
   return getTask(db, id);
 }
+
+export function updateTask(
+  db: PlannerDb,
+  id: string,
+  input: { title?: string; projectId?: string | null; dueAt?: string | null; notes?: string | null }
+): Task | undefined {
+  const current = getTask(db, id);
+  if (!current) return undefined;
+  const now = new Date().toISOString();
+  db.prepare(
+    `UPDATE tasks SET title = ?, project_id = ?, due_at = ?, notes = ?, updated_at = ? WHERE id = ?`
+  ).run(
+    input.title ?? current.title,
+    input.projectId !== undefined ? input.projectId : (current.projectId ?? null),
+    input.dueAt !== undefined ? input.dueAt : (current.dueAt ?? null),
+    input.notes !== undefined ? input.notes : (current.notes ?? null),
+    now,
+    id
+  );
+  return getTask(db, id);
+}
+
+export function deleteTask(db: PlannerDb, id: string): void {
+  db.prepare(`DELETE FROM tasks WHERE id = ?`).run(id);
+}

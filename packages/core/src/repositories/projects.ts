@@ -68,3 +68,25 @@ export function updateProjectProgress(
   );
   return getProject(db, id);
 }
+
+export function updateProject(
+  db: PlannerDb,
+  id: string,
+  input: { name?: string; goal?: string }
+): Project | undefined {
+  const current = getProject(db, id);
+  if (!current) return undefined;
+  const now = new Date().toISOString();
+  db.prepare(`UPDATE projects SET name = ?, goal = ?, updated_at = ? WHERE id = ?`).run(
+    input.name ?? current.name,
+    input.goal ?? current.goal ?? null,
+    now,
+    id
+  );
+  return getProject(db, id);
+}
+
+export function deleteProject(db: PlannerDb, id: string): void {
+  db.prepare(`DELETE FROM tasks WHERE project_id = ?`).run(id);
+  db.prepare(`DELETE FROM projects WHERE id = ?`).run(id);
+}

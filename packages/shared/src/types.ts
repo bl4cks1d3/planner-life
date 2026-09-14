@@ -28,6 +28,72 @@ export interface MemoryEntry {
   createdAt: string;
 }
 
+export type ClientStage = "lead" | "contact" | "proposal" | "closed";
+
+export interface Client {
+  id: string;
+  name: string;
+  stage: ClientStage;
+  value: number;
+  nextAction?: string;
+  nextActionAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Subject {
+  id: string;
+  name: string;
+  progress: number; // 0-100
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ResearchLine {
+  id: string;
+  name: string;
+  stage?: string;
+  refs: number;
+  nextStep?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PaperStatus = "na_fila" | "em_leitura" | "resumido";
+
+export interface Paper {
+  id: string;
+  title: string;
+  source?: string;
+  status: PaperStatus;
+  researchLineId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Habit {
+  id: string;
+  name: string;
+  unit: string;
+  target: number;
+  current: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InboxMessage {
+  id: string;
+  from: string;
+  subject: string;
+  snippet?: string;
+  tag?: string;
+  action?: string;
+  handled: boolean;
+  receivedAt: string;
+  createdAt: string;
+}
+
 export interface PlannerEvent {
   id: string;
   type: PlpEventType;
@@ -43,6 +109,18 @@ export type PlpEventType =
   | "project.created"
   | "project.updated"
   | "memory.created"
+  | "client.created"
+  | "client.updated"
+  | "subject.created"
+  | "subject.updated"
+  | "research_line.created"
+  | "research_line.updated"
+  | "paper.created"
+  | "paper.updated"
+  | "habit.created"
+  | "habit.updated"
+  | "message.synced"
+  | "message.handled"
   | "agent.started"
   | "agent.finished"
   | "device.connected"

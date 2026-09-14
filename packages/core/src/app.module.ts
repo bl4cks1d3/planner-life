@@ -5,6 +5,12 @@ import { EventsModule } from "./events/events.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { TasksModule } from "./tasks/tasks.module";
 import { MemoryModule } from "./memory/memory.module";
+import { ClientsModule } from "./clients/clients.module";
+import { SubjectsModule } from "./subjects/subjects.module";
+import { ResearchModule } from "./research/research.module";
+import { MessagesModule } from "./messages/messages.module";
+import { HabitsModule } from "./habits/habits.module";
+import { GoogleModule } from "./integrations/google/google.module";
 import { AppController } from "./app.controller";
 
 @Module({
@@ -15,6 +21,12 @@ import { AppController } from "./app.controller";
     ProjectsModule,
     TasksModule,
     MemoryModule,
+    ClientsModule,
+    SubjectsModule,
+    ResearchModule,
+    MessagesModule,
+    HabitsModule,
+    GoogleModule,
   ],
   controllers: [AppController],
 })

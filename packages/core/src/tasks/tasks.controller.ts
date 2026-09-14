@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { TasksService } from "./tasks.service";
 import type { TaskStatus } from "@planner-life/shared";
 
@@ -38,5 +38,18 @@ export class TasksController {
       throw new BadRequestException("status invalido");
     }
     return this.tasksService.updateStatus(id, body.status as TaskStatus);
+  }
+
+  @Patch(":id")
+  update(
+    @Param("id") id: string,
+    @Body() body: { title?: string; projectId?: string | null; dueAt?: string | null; notes?: string | null }
+  ) {
+    return this.tasksService.update(id, body);
+  }
+
+  @Delete(":id")
+  remove(@Param("id") id: string) {
+    return this.tasksService.remove(id);
   }
 }

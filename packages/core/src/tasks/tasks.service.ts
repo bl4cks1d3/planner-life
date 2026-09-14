@@ -35,4 +35,25 @@ export class TasksService {
     this.eventBus.publish(eventType, { taskId: id, status });
     return task;
   }
+
+  update(id: string, input: { title?: string; projectId?: string | null; dueAt?: string | null; notes?: string | null }) {
+    const task = tasksRepo.updateTask(this.db, id, input);
+    if (!task) {
+      throw new NotFoundException("tarefa nao encontrada");
+    }
+    this.eventsService.record("task.updated", { taskId: id });
+    this.eventBus.publish("task.updated", { taskId: id });
+    return task;
+  }
+
+  remove(id: string) {
+    const task = tasksRepo.getTask(this.db, id);
+    if (!task) {
+      throw new NotFoundException("tarefa nao encontrada");
+    }
+    tasksRepo.deleteTask(this.db, id);
+    this.eventsService.record("task.updated", { taskId: id, deleted: true });
+    this.eventBus.publish("task.updated", { taskId: id, deleted: true });
+    return { ok: true };
+  }
 }

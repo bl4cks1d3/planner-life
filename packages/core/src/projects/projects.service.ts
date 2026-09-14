@@ -39,4 +39,25 @@ export class ProjectsService {
     this.eventBus.publish("project.updated", { projectId: id, progress });
     return project;
   }
+
+  update(id: string, input: { name?: string; goal?: string }) {
+    const project = projectsRepo.updateProject(this.db, id, input);
+    if (!project) {
+      throw new NotFoundException("projeto nao encontrado");
+    }
+    this.eventsService.record("project.updated", { projectId: id });
+    this.eventBus.publish("project.updated", { projectId: id });
+    return project;
+  }
+
+  remove(id: string) {
+    const project = projectsRepo.getProject(this.db, id);
+    if (!project) {
+      throw new NotFoundException("projeto nao encontrado");
+    }
+    projectsRepo.deleteProject(this.db, id);
+    this.eventsService.record("project.updated", { projectId: id, deleted: true });
+    this.eventBus.publish("project.updated", { projectId: id, deleted: true });
+    return { ok: true };
+  }
 }
