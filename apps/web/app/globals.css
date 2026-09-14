@@ -123,6 +123,7 @@ body {
 .agent-reply {
   margin: 14px 0 0;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   font-size: 14px;
   line-height: 1.5;
   color: var(--text);

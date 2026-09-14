@@ -6,7 +6,7 @@ import type { LlmProvider } from "./types";
 // Modelos do Groq mudam com frequencia (tiers gratuitos sao promovidos/
 // aposentados sem muito aviso). Confira a lista atual em
 // https://console.groq.com/docs/models e ajuste via GROQ_MODEL se preciso.
-const MODEL = process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile";
+const MODEL = process.env.GROQ_MODEL ?? "openai/gpt-oss-120b";
 
 const MISSING_KEY_MESSAGE =
   "GROQ_API_KEY nao configurada. Configure GROQ_API_KEY, GEMINI_API_KEY ou ANTHROPIC_API_KEY no .env (veja .env.example) e ajuste AGENT_PROVIDER se necessario.";
