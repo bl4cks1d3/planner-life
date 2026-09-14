@@ -44,3 +44,7 @@ export function listMemory(db: PlannerDb, limit = 100): MemoryEntry[] {
     .all(limit) as unknown as MemoryRow[];
   return rows.map(rowToMemory);
 }
+
+export function deleteMemory(db: PlannerDb, id: string): void {
+  db.prepare(`DELETE FROM memory_entries WHERE id = ?`).run(id);
+}

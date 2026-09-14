@@ -40,6 +40,8 @@ export class ClientsService {
 
   remove(id: string) {
     clientsRepo.deleteClient(this.db, id);
+    this.eventsService.record("client.deleted", { clientId: id });
+    this.eventBus.publish("client.deleted", { clientId: id });
     return { ok: true };
   }
 }

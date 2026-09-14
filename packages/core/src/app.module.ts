@@ -11,6 +11,7 @@ import { ResearchModule } from "./research/research.module";
 import { MessagesModule } from "./messages/messages.module";
 import { HabitsModule } from "./habits/habits.module";
 import { GoogleModule } from "./integrations/google/google.module";
+import { P2pBridgeModule } from "./p2p-bridge/p2p-bridge.module";
 import { AppController } from "./app.controller";
 
 @Module({
@@ -27,6 +28,7 @@ import { AppController } from "./app.controller";
     MessagesModule,
     HabitsModule,
     GoogleModule,
+    P2pBridgeModule,
   ],
   controllers: [AppController],
 })

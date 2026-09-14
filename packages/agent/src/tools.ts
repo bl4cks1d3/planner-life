@@ -121,13 +121,14 @@ export const AGENT_TOOLS: AgentTool[] = [
   },
   {
     name: "update_project",
-    description: "Edita o nome ou objetivo de um projeto.",
+    description: "Edita o nome, objetivo ou progresso (0-100) de um projeto.",
     parameters: {
       type: "object",
       properties: {
         projectId: { type: "string" },
         name: { type: "string" },
         goal: { type: "string" },
+        progress: { type: "number" },
       },
       required: ["projectId"],
     },
@@ -152,6 +153,20 @@ export const AGENT_TOOLS: AgentTool[] = [
         tags: { type: "array", items: { type: "string" } },
       },
       required: ["content"],
+    },
+  },
+  {
+    name: "list_memory",
+    description: "Lista as informacoes salvas na memoria de longo prazo do usuario.",
+    parameters: { type: "object", properties: {} },
+  },
+  {
+    name: "delete_memory",
+    description: "Remove uma informacao da memoria de longo prazo (ex: quando o usuario diz que algo nao vale mais).",
+    parameters: {
+      type: "object",
+      properties: { memoryId: { type: "string" } },
+      required: ["memoryId"],
     },
   },
 
@@ -260,6 +275,19 @@ export const AGENT_TOOLS: AgentTool[] = [
     name: "list_research_lines",
     description: "Lista as linhas de investigacao de pesquisa.",
     parameters: { type: "object", properties: {} },
+  },
+  {
+    name: "update_research_line",
+    description: "Atualiza o estagio ou o proximo passo de uma linha de pesquisa.",
+    parameters: {
+      type: "object",
+      properties: {
+        lineId: { type: "string" },
+        stage: { type: "string" },
+        nextStep: { type: "string" },
+      },
+      required: ["lineId"],
+    },
   },
   {
     name: "delete_research_line",
@@ -387,7 +415,10 @@ export const AGENT_TOOLS: AgentTool[] = [
   {
     name: "list_google_tasks",
     description: "Lista as tarefas do Google Tasks (conta Google conectada).",
-    parameters: { type: "object", properties: {} },
+    parameters: {
+      type: "object",
+      properties: { account: { type: "string", description: "E-mail da conta, se houver mais de uma conectada" } },
+    },
   },
   {
     name: "create_google_task",
@@ -398,6 +429,7 @@ export const AGENT_TOOLS: AgentTool[] = [
         title: { type: "string" },
         notes: { type: "string" },
         due: { type: "string", description: "Data em ISO 8601" },
+        account: { type: "string", description: "E-mail da conta, se houver mais de uma conectada" },
       },
       required: ["title"],
     },
@@ -413,6 +445,7 @@ export const AGENT_TOOLS: AgentTool[] = [
         notes: { type: "string" },
         due: { type: "string" },
         status: { type: "string", enum: ["needsAction", "completed"] },
+        account: { type: "string", description: "E-mail da conta, se houver mais de uma conectada" },
       },
       required: ["taskId"],
     },
@@ -422,8 +455,46 @@ export const AGENT_TOOLS: AgentTool[] = [
     description: "Exclui uma tarefa do Google Tasks.",
     parameters: {
       type: "object",
-      properties: { taskId: { type: "string" } },
+      properties: {
+        taskId: { type: "string" },
+        account: { type: "string", description: "E-mail da conta, se houver mais de uma conectada" },
+      },
       required: ["taskId"],
+    },
+  },
+
+  // Google (Calendar, status, sincronizacao)
+  {
+    name: "list_calendar_events",
+    description: "Lista os proximos eventos de todas as agendas do Google Calendar conectadas (inclui agendas compartilhadas, como a da familia).",
+    parameters: {
+      type: "object",
+      properties: { limit: { type: "number", description: "Quantidade maxima de eventos (default 10)" } },
+    },
+  },
+  {
+    name: "check_google_status",
+    description: "Verifica quais contas Google estao conectadas (Gmail/Calendar/Tasks).",
+    parameters: { type: "object", properties: {} },
+  },
+  {
+    name: "sync_gmail",
+    description: "Forca uma nova sincronizacao do Gmail agora, buscando as mensagens mais recentes.",
+    parameters: {
+      type: "object",
+      properties: {
+        limit: { type: "number", description: "Quantas mensagens buscar por conta (default 10)" },
+        account: { type: "string", description: "Sincronizar so uma conta especifica (opcional)" },
+      },
+    },
+  },
+  {
+    name: "disconnect_google_account",
+    description: "Desconecta uma conta Google (Gmail/Calendar/Tasks param de funcionar para ela).",
+    parameters: {
+      type: "object",
+      properties: { email: { type: "string" } },
+      required: ["email"],
     },
   },
 ];
@@ -476,6 +547,10 @@ export async function runTool(name: string, input: Record<string, unknown>): Pro
         method: "POST",
         body: JSON.stringify({ ...input, source: "personal-agent" }),
       });
+    case "list_memory":
+      return coreFetch("/memory");
+    case "delete_memory":
+      return coreFetch(`/memory/${input.memoryId}`, { method: "DELETE" });
 
     case "create_client":
       return coreFetch("/clients", { method: "POST", body: JSON.stringify(input) });
@@ -503,6 +578,10 @@ export async function runTool(name: string, input: Record<string, unknown>): Pro
       return coreFetch("/research/lines", { method: "POST", body: JSON.stringify(input) });
     case "list_research_lines":
       return coreFetch("/research/lines");
+    case "update_research_line": {
+      const { lineId, ...rest } = input;
+      return coreFetch(`/research/lines/${lineId}`, { method: "PATCH", body: JSON.stringify(rest) });
+    }
     case "delete_research_line":
       return coreFetch(`/research/lines/${input.lineId}`, { method: "DELETE" });
     case "create_paper":
@@ -540,16 +619,37 @@ export async function runTool(name: string, input: Record<string, unknown>): Pro
         body: JSON.stringify({ handled: input.handled }),
       });
 
-    case "list_google_tasks":
-      return coreFetch("/integrations/google/tasks");
+    case "list_google_tasks": {
+      const params = new URLSearchParams(input as Record<string, string>);
+      return coreFetch(`/integrations/google/tasks?${params.toString()}`);
+    }
     case "create_google_task":
       return coreFetch("/integrations/google/tasks", { method: "POST", body: JSON.stringify(input) });
     case "update_google_task": {
       const { taskId, ...rest } = input;
       return coreFetch(`/integrations/google/tasks/${taskId}`, { method: "PATCH", body: JSON.stringify(rest) });
     }
-    case "delete_google_task":
-      return coreFetch(`/integrations/google/tasks/${input.taskId}`, { method: "DELETE" });
+    case "delete_google_task": {
+      const params = new URLSearchParams(
+        input.account ? { account: input.account as string } : {}
+      );
+      return coreFetch(`/integrations/google/tasks/${input.taskId}?${params.toString()}`, { method: "DELETE" });
+    }
+
+    case "list_calendar_events": {
+      const params = new URLSearchParams(input as Record<string, string>);
+      return coreFetch(`/integrations/google/calendar?${params.toString()}`);
+    }
+    case "check_google_status":
+      return coreFetch("/integrations/google/status");
+    case "sync_gmail": {
+      const params = new URLSearchParams(input as Record<string, string>);
+      return coreFetch(`/integrations/google/sync-gmail?${params.toString()}`, { method: "POST" });
+    }
+    case "disconnect_google_account":
+      return coreFetch(`/integrations/google/accounts/${encodeURIComponent(input.email as string)}`, {
+        method: "DELETE",
+      });
 
     default:
       throw new Error(`ferramenta desconhecida: ${name}`);

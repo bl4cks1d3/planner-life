@@ -40,6 +40,8 @@ export class HabitsService {
       throw new NotFoundException("habito nao encontrado");
     }
     habitsRepo.deleteHabit(this.db, id);
+    this.eventsService.record("habit.deleted", { habitId: id });
+    this.eventBus.publish("habit.deleted", { habitId: id });
     return { ok: true };
   }
 }

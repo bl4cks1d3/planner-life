@@ -27,7 +27,10 @@ export class ProjectsController {
   }
 
   @Patch(":id")
-  update(@Param("id") id: string, @Body() body: { name?: string; goal?: string }) {
+  update(@Param("id") id: string, @Body() body: { name?: string; goal?: string; progress?: number }) {
+    if (body?.progress !== undefined && (body.progress < 0 || body.progress > 100)) {
+      throw new BadRequestException("progress deve ser um numero entre 0 e 100");
+    }
     return this.projectsService.update(id, body);
   }
 

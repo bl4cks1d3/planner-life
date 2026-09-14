@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Post, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Query } from "@nestjs/common";
 import { MemoryService } from "./memory.service";
 
 @Controller("memory")
@@ -20,5 +20,10 @@ export class MemoryController {
       tags: body.tags,
       source: body.source,
     });
+  }
+
+  @Delete(":id")
+  remove(@Param("id") id: string) {
+    return this.memoryService.remove(id);
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { GOOGLE_CONNECT_URL, getMessageBody, type GoogleAccount, type InboxMessage } from "@/lib/api";
+import { GOOGLE_CONNECT_URL, createMessage, getMessageBody, type GoogleAccount, type InboxMessage } from "@/lib/api";
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
@@ -11,13 +11,37 @@ export interface InboxViewProps {
   messages: InboxMessage[];
   googleAccounts: GoogleAccount[];
   onToggleHandled: (message: InboxMessage) => void;
+  onSyncGmail: () => void;
+  syncing: boolean;
+  onChange: () => void;
 }
 
-export default function InboxView({ messages, googleAccounts, onToggleHandled }: InboxViewProps) {
+export default function InboxView({
+  messages,
+  googleAccounts,
+  onToggleHandled,
+  onSyncGmail,
+  syncing,
+  onChange,
+}: InboxViewProps) {
   const connected = googleAccounts.length > 0;
   const [openId, setOpenId] = useState<string | null>(null);
   const [bodies, setBodies] = useState<Record<string, string>>({});
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [showNew, setShowNew] = useState(false);
+  const [draft, setDraft] = useState({ from: "", subject: "", snippet: "" });
+
+  async function handleCreate() {
+    if (!draft.from.trim() || !draft.subject.trim()) return;
+    await createMessage({
+      from: draft.from.trim(),
+      subject: draft.subject.trim(),
+      snippet: draft.snippet.trim() || undefined,
+    });
+    setDraft({ from: "", subject: "", snippet: "" });
+    setShowNew(false);
+    onChange();
+  }
 
   async function handleRead(m: InboxMessage) {
     if (openId === m.id) {
@@ -48,10 +72,49 @@ export default function InboxView({ messages, googleAccounts, onToggleHandled }:
           </div>
           <h1 className="view-title">Inbox</h1>
         </div>
-        <a href={GOOGLE_CONNECT_URL} className="btn btn-secondary">
-          + Conectar conta do Gmail
-        </a>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {connected && (
+            <button className="btn btn-secondary" onClick={onSyncGmail} disabled={syncing}>
+              {syncing ? "Sincronizando…" : "🔄 Sincronizar agora"}
+            </button>
+          )}
+          <button className="btn btn-secondary" onClick={() => setShowNew((v) => !v)}>
+            {showNew ? "Cancelar" : "+ Adicionar manual"}
+          </button>
+          <a href={GOOGLE_CONNECT_URL} className="btn btn-secondary">
+            + Conectar conta do Gmail
+          </a>
+        </div>
       </div>
+
+      {showNew && (
+        <div className="pad-24 row-divider" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <input
+            className="chat-input"
+            style={{ flex: "1 1 160px" }}
+            placeholder="De (remetente)"
+            value={draft.from}
+            onChange={(e) => setDraft((s) => ({ ...s, from: e.target.value }))}
+          />
+          <input
+            className="chat-input"
+            style={{ flex: "2 1 220px" }}
+            placeholder="Assunto"
+            value={draft.subject}
+            onChange={(e) => setDraft((s) => ({ ...s, subject: e.target.value }))}
+          />
+          <input
+            className="chat-input"
+            style={{ flex: "2 1 220px" }}
+            placeholder="Resumo (opcional)"
+            value={draft.snippet}
+            onChange={(e) => setDraft((s) => ({ ...s, snippet: e.target.value }))}
+          />
+          <button className="btn btn-primary" onClick={handleCreate}>
+            Adicionar
+          </button>
+        </div>
+      )}
 
       {!connected && (
         <div className="pad-24" style={{ color: "var(--color-neutral-700)", fontSize: 13 }}>

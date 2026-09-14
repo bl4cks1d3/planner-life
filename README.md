@@ -168,12 +168,12 @@ Raspberry Pi rodando Node.js):
 pnpm dev:p2p
 ```
 
-Dois nos na mesma rede local se descobrem automaticamente via mDNS e passam
-a trocar eventos PLP (`task.created`, `project.updated`, etc.) por
-gossipsub. Isso e a base da "Rede P2P" da visao do projeto: o Planner Core
-publica um evento no `PlannerEventBus` sempre que algo muda, e um bridge
-futuro (a ser adicionado em `packages/core`) vai encaminhar esses eventos
-para o `p2p-node` local, propagando para os outros dispositivos.
+Dois nos na mesma rede local se descobrem automaticamente via mDNS, se
+conectam e passam a trocar eventos PLP (`task.created`, `project.updated`,
+etc.) por gossipsub. O Planner Core ja publica automaticamente todo evento
+do `PlannerEventBus` para o `p2p-node` local (`P2pBridgeService`, via HTTP
+em `P2P_NODE_HTTP_URL`), que propaga para os outros dispositivos na rede --
+essa e a base da "Rede P2P" da visao do projeto.
 
 ## O que ja funciona no v0.1
 
@@ -192,14 +192,17 @@ para o `p2p-node` local, propagando para os outros dispositivos.
 - [x] Dashboard completo (Next.js): Hoje, Projetos, CRM, Estudos, Pesquisa,
       Inbox e Rede, com chat lateral e comando rapido conversando direto
       com o Personal Agent
-- [x] No P2P (libp2p) capaz de descobrir outros nos na rede local e trocar
-      eventos PLP - mesmo codigo roda no PC e no Raspberry Pi
+- [x] No P2P (libp2p) capaz de descobrir, conectar e trocar eventos PLP com
+      outros nos na rede local - mesmo codigo roda no PC e no Raspberry Pi
+- [x] Bridge automatico `core -> p2p-node`: todo evento do
+      `PlannerEventBus` (tarefas, projetos, memoria, clientes, habitos,
+      pesquisa...) e publicado de verdade na rede PLP via gossipsub
 
 ## Proximos passos
 
-- Bridge automatico `core -> p2p-node` (hoje os eventos ficam no
-  `PlannerEventBus` em processo; falta publica-los na rede P2P e persistir o
-  que chega de outros nos)
+- Persistir no Planner Core os eventos PLP recebidos de outros dispositivos
+  (hoje o `p2p-node` so loga o que chega; falta um `onPlpEvent` -> escrita
+  no banco local)
 - Testar o `p2p-node` de verdade em um Raspberry Pi 3 (1GB RAM) na mesma
   rede do PC
 - Agentes especializados adicionais (Research, Study, Coding, CRM,

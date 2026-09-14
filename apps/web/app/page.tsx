@@ -5,6 +5,7 @@ import {
   getGoogleStatus,
   getGoogleTasks,
   getHabits,
+  getMemory,
   getMessages,
   getPapers,
   getProjects,
@@ -26,6 +27,7 @@ export default async function Home() {
     papers,
     messages,
     habits,
+    memoryEntries,
     googleStatus,
     calendarEvents,
     googleTasks,
@@ -40,6 +42,7 @@ export default async function Home() {
     getPapers(),
     getMessages(),
     getHabits(),
+    getMemory(),
     getGoogleStatus(),
     getCalendarEvents(8),
     getGoogleTasks(),
@@ -57,6 +60,7 @@ export default async function Home() {
       papers={papers}
       messages={messages}
       habits={habits}
+      memoryEntries={memoryEntries}
       googleAccounts={googleStatus.accounts}
       calendarEvents={calendarEvents}
       googleTasks={googleTasks}

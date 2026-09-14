@@ -23,4 +23,11 @@ export class MemoryService {
     this.eventBus.publish("memory.created", { memoryId: entry.id });
     return entry;
   }
+
+  remove(id: string) {
+    memoryRepo.deleteMemory(this.db, id);
+    this.eventsService.record("memory.deleted", { memoryId: id });
+    this.eventBus.publish("memory.deleted", { memoryId: id });
+    return { ok: true };
+  }
 }

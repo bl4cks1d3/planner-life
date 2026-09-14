@@ -14,6 +14,7 @@ const SERVICES: { key: keyof ServiceHealth; name: string; role: string }[] = [
   { key: "core", name: "Planner Core", role: "Dados, regras e barramento de eventos" },
   { key: "agent", name: "Personal Agent", role: "Harness de IA (MCP + Skills)" },
   { key: "voice", name: "Voice (Piper)", role: "TTS local em português" },
+  { key: "p2pNode", name: "P2P Node", role: "libp2p + gossipsub -- publica eventos na rede PLP" },
 ];
 
 export interface RedeViewProps {

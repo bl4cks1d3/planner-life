@@ -11,3 +11,6 @@ data/
 
 # Binarios e modelos de voz baixados (veja packages/voice/README.md)
 packages/voice/vendor/
+
+# Estado local de ferramentas (Claude Code, etc.)
+.claude/

@@ -36,6 +36,8 @@ export class SubjectsService {
 
   remove(id: string) {
     subjectsRepo.deleteSubject(this.db, id);
+    this.eventsService.record("subject.deleted", { subjectId: id });
+    this.eventBus.publish("subject.deleted", { subjectId: id });
     return { ok: true };
   }
 }

@@ -4,15 +4,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   GOOGLE_CONNECT_URL,
+  disconnectGoogleAccount,
   setTaskStatus,
   setMessageHandled,
   sendChat,
+  syncGmail,
   type CalendarEvent,
   type Client,
   type GoogleAccount,
   type GoogleTask,
   type Habit,
   type InboxMessage,
+  type MemoryEntry,
   type Paper,
   type PlannerEvent,
   type Project,
@@ -29,8 +32,9 @@ import EstudosView from "./views/EstudosView";
 import PesquisaView from "./views/PesquisaView";
 import InboxView from "./views/InboxView";
 import RedeView from "./views/RedeView";
+import MemoriaView from "./views/MemoriaView";
 
-type ViewId = "hoje" | "projetos" | "crm" | "estudos" | "pesquisa" | "inbox" | "rede";
+type ViewId = "hoje" | "projetos" | "crm" | "estudos" | "pesquisa" | "inbox" | "memoria" | "rede";
 
 const NAV: { id: ViewId; label: string }[] = [
   { id: "hoje", label: "Hoje" },
@@ -39,6 +43,7 @@ const NAV: { id: ViewId; label: string }[] = [
   { id: "estudos", label: "Estudos" },
   { id: "pesquisa", label: "Pesquisa" },
   { id: "inbox", label: "Inbox" },
+  { id: "memoria", label: "Memória" },
   { id: "rede", label: "Rede" },
 ];
 
@@ -52,6 +57,7 @@ export interface DashboardShellProps {
   papers: Paper[];
   messages: InboxMessage[];
   habits: Habit[];
+  memoryEntries: MemoryEntry[];
   googleAccounts: GoogleAccount[];
   calendarEvents: CalendarEvent[];
   googleTasks: GoogleTask[];
@@ -69,6 +75,7 @@ export default function DashboardShell(props: DashboardShellProps) {
     papers,
     messages,
     habits,
+    memoryEntries,
     googleAccounts,
     calendarEvents,
     googleTasks,
@@ -80,6 +87,7 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [cmd, setCmd] = useState("");
   const [running, setRunning] = useState(false);
   const [bannerMsg, setBannerMsg] = useState("");
+  const [syncing, setSyncing] = useState(false);
 
   const pendingCount = tasks.filter((t) => t.status !== "done" && t.status !== "cancelled").length;
   const unhandledCount = messages.filter((m) => !m.handled).length;
@@ -94,6 +102,7 @@ export default function DashboardShell(props: DashboardShellProps) {
     estudos: String(subjects.length),
     pesquisa: `${papers.length} artigos`,
     inbox: String(unhandledCount),
+    memoria: String(memoryEntries.length),
     rede: `${events.length} eventos`,
   };
 
@@ -127,6 +136,22 @@ export default function DashboardShell(props: DashboardShellProps) {
 
   async function toggleMessageHandled(message: InboxMessage) {
     await setMessageHandled(message.id, !message.handled);
+    onChange();
+  }
+
+  async function handleSyncGmail() {
+    setSyncing(true);
+    try {
+      await syncGmail();
+      onChange();
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function handleDisconnectAccount(email: string) {
+    if (!confirm(`Desconectar ${email}? Gmail/Calendar/Tasks param de funcionar para essa conta.`)) return;
+    await disconnectGoogleAccount(email);
     onChange();
   }
 
@@ -168,7 +193,10 @@ export default function DashboardShell(props: DashboardShellProps) {
           </div>
           {googleAccounts.map((acc) => (
             <div key={acc.email} className="sidebar-row" style={{ fontSize: 11, color: "var(--color-neutral-700)" }}>
-              <span>{acc.email}</span>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{acc.email}</span>
+              <button className="chat-listen" style={{ fontSize: 10, flex: "0 0 auto" }} onClick={() => handleDisconnectAccount(acc.email)}>
+                desconectar
+              </button>
             </div>
           ))}
           <a href={GOOGLE_CONNECT_URL} className="btn btn-secondary btn-block" style={{ marginTop: 4 }}>
@@ -248,8 +276,12 @@ export default function DashboardShell(props: DashboardShellProps) {
                 messages={messages}
                 googleAccounts={googleAccounts}
                 onToggleHandled={toggleMessageHandled}
+                onSyncGmail={handleSyncGmail}
+                syncing={syncing}
+                onChange={onChange}
               />
             )}
+            {view === "memoria" && <MemoriaView entries={memoryEntries} onChange={onChange} />}
             {view === "rede" && <RedeView events={events} health={health} />}
           </div>
 

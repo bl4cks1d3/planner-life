@@ -72,14 +72,15 @@ export function updateProjectProgress(
 export function updateProject(
   db: PlannerDb,
   id: string,
-  input: { name?: string; goal?: string }
+  input: { name?: string; goal?: string; progress?: number }
 ): Project | undefined {
   const current = getProject(db, id);
   if (!current) return undefined;
   const now = new Date().toISOString();
-  db.prepare(`UPDATE projects SET name = ?, goal = ?, updated_at = ? WHERE id = ?`).run(
+  db.prepare(`UPDATE projects SET name = ?, goal = ?, progress = ?, updated_at = ? WHERE id = ?`).run(
     input.name ?? current.name,
     input.goal ?? current.goal ?? null,
+    input.progress ?? current.progress,
     now,
     id
   );

@@ -37,6 +37,8 @@ export class ResearchService {
 
   removeLine(id: string) {
     researchRepo.deleteResearchLine(this.db, id);
+    this.eventsService.record("research_line.deleted", { lineId: id });
+    this.eventBus.publish("research_line.deleted", { lineId: id });
     return { ok: true };
   }
 
@@ -63,6 +65,8 @@ export class ResearchService {
 
   removePaper(id: string) {
     researchRepo.deletePaper(this.db, id);
+    this.eventsService.record("paper.deleted", { paperId: id });
+    this.eventBus.publish("paper.deleted", { paperId: id });
     return { ok: true };
   }
 }

@@ -1,6 +1,7 @@
 const CORE_API_URL = process.env.NEXT_PUBLIC_CORE_API_URL ?? "http://localhost:4000";
 const AGENT_API_URL = process.env.NEXT_PUBLIC_AGENT_API_URL ?? "http://localhost:4100";
 const VOICE_API_URL = process.env.NEXT_PUBLIC_VOICE_API_URL ?? "http://localhost:4200";
+const P2P_HTTP_URL = process.env.NEXT_PUBLIC_P2P_HTTP_URL ?? "http://localhost:15001";
 
 export interface Project {
   id: string;
@@ -76,6 +77,14 @@ export interface Paper {
   updatedAt: string;
 }
 
+export interface MemoryEntry {
+  id: string;
+  content: string;
+  tags: string[];
+  source: string;
+  createdAt: string;
+}
+
 export interface InboxMessage {
   id: string;
   from: string;
@@ -94,10 +103,32 @@ export async function getProjects(): Promise<Project[]> {
   return res.json();
 }
 
-export async function getTasks(): Promise<Task[]> {
-  const res = await fetch(`${CORE_API_URL}/tasks`, { cache: "no-store" });
+export async function getTasks(filter?: { status?: TaskStatus; projectId?: string }): Promise<Task[]> {
+  const params = new URLSearchParams((filter ?? {}) as Record<string, string>).toString();
+  const res = await fetch(`${CORE_API_URL}/tasks${params ? `?${params}` : ""}`, { cache: "no-store" });
   if (!res.ok) throw new Error("falha ao buscar tarefas do Planner Core");
   return res.json();
+}
+
+export async function getMemory(limit = 100): Promise<MemoryEntry[]> {
+  const res = await fetch(`${CORE_API_URL}/memory?limit=${limit}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("falha ao buscar memoria");
+  return res.json();
+}
+
+export async function createMemory(input: { content: string; tags?: string[] }): Promise<MemoryEntry> {
+  const res = await fetch(`${CORE_API_URL}/memory`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao salvar memoria");
+  return res.json();
+}
+
+export async function deleteMemory(id: string): Promise<void> {
+  const res = await fetch(`${CORE_API_URL}/memory/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("falha ao excluir memoria");
 }
 
 export async function getEvents(limit = 20): Promise<PlannerEvent[]> {
@@ -159,7 +190,10 @@ export async function createProject(input: { name: string; goal?: string }): Pro
   return res.json();
 }
 
-export async function updateProject(projectId: string, input: { name?: string; goal?: string }): Promise<Project> {
+export async function updateProject(
+  projectId: string,
+  input: { name?: string; goal?: string; progress?: number }
+): Promise<Project> {
   const res = await fetch(`${CORE_API_URL}/projects/${projectId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -283,8 +317,9 @@ export async function deleteResearchLine(id: string): Promise<void> {
   if (!res.ok) throw new Error("falha ao excluir linha de pesquisa");
 }
 
-export async function getPapers(): Promise<Paper[]> {
-  const res = await fetch(`${CORE_API_URL}/research/papers`, { cache: "no-store" });
+export async function getPapers(researchLineId?: string): Promise<Paper[]> {
+  const params = researchLineId ? `?researchLineId=${researchLineId}` : "";
+  const res = await fetch(`${CORE_API_URL}/research/papers${params}`, { cache: "no-store" });
   if (!res.ok) throw new Error("falha ao buscar artigos");
   return res.json();
 }
@@ -317,6 +352,22 @@ export async function deletePaper(id: string): Promise<void> {
 export async function getMessages(): Promise<InboxMessage[]> {
   const res = await fetch(`${CORE_API_URL}/messages`, { cache: "no-store" });
   if (!res.ok) throw new Error("falha ao buscar mensagens");
+  return res.json();
+}
+
+export async function createMessage(input: {
+  from: string;
+  subject: string;
+  snippet?: string;
+  tag?: string;
+  action?: string;
+}): Promise<InboxMessage> {
+  const res = await fetch(`${CORE_API_URL}/messages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao adicionar mensagem");
   return res.json();
 }
 
@@ -383,6 +434,7 @@ export interface ServiceHealth {
   core: boolean;
   agent: boolean;
   voice: boolean;
+  p2pNode: boolean;
 }
 
 async function pingHealth(url: string): Promise<boolean> {
@@ -398,12 +450,13 @@ async function pingHealth(url: string): Promise<boolean> {
 }
 
 export async function getServiceHealth(): Promise<ServiceHealth> {
-  const [core, agent, voice] = await Promise.all([
+  const [core, agent, voice, p2pNode] = await Promise.all([
     pingHealth(CORE_API_URL),
     pingHealth(AGENT_API_URL),
     pingHealth(VOICE_API_URL),
+    pingHealth(P2P_HTTP_URL),
   ]);
-  return { core, agent, voice };
+  return { core, agent, voice, p2pNode };
 }
 
 export interface GoogleAccount {
@@ -501,6 +554,12 @@ export async function updateGoogleTask(
 export async function deleteGoogleTask(id: string): Promise<void> {
   const res = await fetch(`${CORE_API_URL}/integrations/google/tasks/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("falha ao excluir tarefa do Google Tasks");
+}
+
+export async function syncGmail(limit = 10): Promise<{ synced: number; accounts: string[] }> {
+  const res = await fetch(`${CORE_API_URL}/integrations/google/sync-gmail?limit=${limit}`, { method: "POST" });
+  if (!res.ok) throw new Error("falha ao sincronizar o Gmail");
+  return res.json();
 }
 
 export async function sendChat(message: string): Promise<string> {

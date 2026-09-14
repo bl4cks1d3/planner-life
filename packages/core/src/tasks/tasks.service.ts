@@ -52,8 +52,8 @@ export class TasksService {
       throw new NotFoundException("tarefa nao encontrada");
     }
     tasksRepo.deleteTask(this.db, id);
-    this.eventsService.record("task.updated", { taskId: id, deleted: true });
-    this.eventBus.publish("task.updated", { taskId: id, deleted: true });
+    this.eventsService.record("task.deleted", { taskId: id });
+    this.eventBus.publish("task.deleted", { taskId: id });
     return { ok: true };
   }
 }

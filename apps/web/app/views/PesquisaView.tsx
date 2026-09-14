@@ -7,6 +7,7 @@ import {
   deletePaper,
   deleteResearchLine,
   updatePaperStatus,
+  updateResearchLine,
   type Paper,
   type ResearchLine,
 } from "@/lib/api";
@@ -29,6 +30,8 @@ export default function PesquisaView({ lines, papers, onChange }: PesquisaViewPr
   const [newLine, setNewLine] = useState({ name: "", stage: "" });
   const [showNewPaper, setShowNewPaper] = useState(false);
   const [newPaper, setNewPaper] = useState({ title: "", source: "" });
+  const [editingLineId, setEditingLineId] = useState<string | null>(null);
+  const [editLine, setEditLine] = useState({ stage: "", nextStep: "" });
 
   async function handleCreateLine() {
     if (!newLine.name.trim()) return;
@@ -40,6 +43,20 @@ export default function PesquisaView({ lines, papers, onChange }: PesquisaViewPr
 
   async function handleDeleteLine(id: string) {
     await deleteResearchLine(id);
+    onChange();
+  }
+
+  function startEditLine(l: ResearchLine) {
+    setEditingLineId(l.id);
+    setEditLine({ stage: l.stage ?? "", nextStep: l.nextStep ?? "" });
+  }
+
+  async function saveEditLine(id: string) {
+    await updateResearchLine(id, {
+      stage: editLine.stage.trim() || undefined,
+      nextStep: editLine.nextStep.trim() || undefined,
+    });
+    setEditingLineId(null);
     onChange();
   }
 
@@ -99,23 +116,53 @@ export default function PesquisaView({ lines, papers, onChange }: PesquisaViewPr
               </button>
             </div>
           )}
-          {lines.map((l) => (
-            <div key={l.id} className="row-divider" style={{ padding: "14px 24px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>{l.name}</div>
-                <button className="chat-listen" style={{ fontSize: 11 }} onClick={() => handleDeleteLine(l.id)}>
-                  excluir
+          {lines.map((l) =>
+            editingLineId === l.id ? (
+              <div key={l.id} className="row-divider" style={{ padding: "14px 24px", display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <input
+                  className="chat-input"
+                  style={{ flex: "1 1 140px" }}
+                  placeholder="Estágio"
+                  value={editLine.stage}
+                  onChange={(e) => setEditLine((s) => ({ ...s, stage: e.target.value }))}
+                />
+                <input
+                  className="chat-input"
+                  style={{ flex: "1 1 140px" }}
+                  placeholder="Próximo passo"
+                  value={editLine.nextStep}
+                  onChange={(e) => setEditLine((s) => ({ ...s, nextStep: e.target.value }))}
+                />
+                <button className="btn btn-primary" onClick={() => saveEditLine(l.id)}>
+                  Salvar
+                </button>
+                <button className="btn btn-secondary" onClick={() => setEditingLineId(null)}>
+                  Cancelar
                 </button>
               </div>
-              <div style={{ fontSize: 12, color: "var(--color-neutral-700)", margin: "3px 0 8px" }}>
-                {l.stage ?? "sem estágio definido"}
+            ) : (
+              <div key={l.id} className="row-divider" style={{ padding: "14px 24px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{l.name}</div>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button className="chat-listen" style={{ fontSize: 11 }} onClick={() => startEditLine(l)}>
+                      editar
+                    </button>
+                    <button className="chat-listen" style={{ fontSize: 11 }} onClick={() => handleDeleteLine(l.id)}>
+                      excluir
+                    </button>
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--color-neutral-700)", margin: "3px 0 8px" }}>
+                  {l.stage ?? "sem estágio definido"}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  <span className="tag tag-neutral">{l.refs} refs</span>
+                  {l.nextStep && <span className="tag tag-outline">{l.nextStep}</span>}
+                </div>
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                <span className="tag tag-neutral">{l.refs} refs</span>
-                {l.nextStep && <span className="tag tag-outline">{l.nextStep}</span>}
-              </div>
-            </div>
-          ))}
+            )
+          )}
           {lines.length === 0 && !showNewLine && (
             <p style={{ padding: "16px 24px", color: "var(--color-neutral-700)", fontSize: 14 }}>
               Nenhuma linha de pesquisa ainda.

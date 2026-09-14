@@ -4,11 +4,14 @@ import { dirname, resolve } from "node:path";
 config({ path: resolve(dirname(fileURLToPath(import.meta.url)), "../../../.env") });
 
 import { createPlannerNode, onPlpEvent, publishPlpEvent } from "./node.js";
+import { createHttpBridge } from "./http-bridge.js";
 
 const port = Number(process.env.P2P_TCP_PORT ?? 15000);
+const httpPort = Number(process.env.P2P_HTTP_PORT ?? 15001);
 const nodeName = process.env.P2P_NODE_NAME ?? "planner-node";
 
 const node = await createPlannerNode({ port, nodeName });
+const httpBridge = createHttpBridge(node, nodeName, httpPort);
 
 console.log(`[p2p:${nodeName}] peer id: ${node.peerId.toString()}`);
 console.log(
@@ -38,6 +41,7 @@ node.addEventListener("peer:connect", () => {
 
 process.on("SIGINT", async () => {
   console.log(`\n[p2p:${nodeName}] encerrando...`);
+  httpBridge.close();
   await node.stop();
   process.exit(0);
 });

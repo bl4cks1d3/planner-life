@@ -49,6 +49,12 @@ export async function createPlannerNode(
 
   node.addEventListener("peer:discovery", (evt) => {
     console.log(`[p2p:${nodeName}] peer descoberto: ${evt.detail.id.toString()}`);
+    // mDNS so avisa que o peer existe -- quem conecta de verdade e o dial
+    // explicito abaixo (sem isso, dois nos podem se "descobrir" para
+    // sempre sem nunca trocar uma mensagem PLP).
+    node.dial(evt.detail.multiaddrs).catch((err) => {
+      console.log(`[p2p:${nodeName}] falha ao conectar em ${evt.detail.id.toString()}: ${err instanceof Error ? err.message : err}`);
+    });
   });
 
   node.addEventListener("peer:connect", (evt) => {

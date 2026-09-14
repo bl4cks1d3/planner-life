@@ -56,7 +56,7 @@ export default function ProjetosView({ projects, tasks, googleTasks, onChange }:
   }
 
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
-  const [editProject, setEditProject] = useState({ name: "", goal: "" });
+  const [editProject, setEditProject] = useState({ name: "", goal: "", progress: "0" });
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [newTask, setNewTask] = useState({ title: "", dueAt: "" });
@@ -74,11 +74,15 @@ export default function ProjetosView({ projects, tasks, googleTasks, onChange }:
 
   function startEditProject(p: Project) {
     setEditingProjectId(p.id);
-    setEditProject({ name: p.name, goal: p.goal ?? "" });
+    setEditProject({ name: p.name, goal: p.goal ?? "", progress: String(p.progress) });
   }
 
   async function saveEditProject(id: string) {
-    await updateProject(id, { name: editProject.name.trim(), goal: editProject.goal.trim() || undefined });
+    await updateProject(id, {
+      name: editProject.name.trim(),
+      goal: editProject.goal.trim() || undefined,
+      progress: Number(editProject.progress),
+    });
     setEditingProjectId(null);
     onChange();
   }
@@ -186,7 +190,21 @@ export default function ProjetosView({ projects, tasks, googleTasks, onChange }:
                             onChange={(e) => setEditProject((s) => ({ ...s, goal: e.target.value }))}
                           />
                         </td>
-                        <td colSpan={2}></td>
+                        <td style={{ fontVariantNumeric: "tabular-nums" }}>
+                          {done}/{projectTasks.length}
+                        </td>
+                        <td>
+                          <input
+                            className="chat-input"
+                            type="number"
+                            min={0}
+                            max={100}
+                            style={{ width: 70 }}
+                            value={editProject.progress}
+                            onChange={(e) => setEditProject((s) => ({ ...s, progress: e.target.value }))}
+                          />
+                          %
+                        </td>
                         <td style={{ display: "flex", gap: 6 }}>
                           <button className="btn btn-primary" onClick={() => saveEditProject(p.id)}>
                             Salvar
