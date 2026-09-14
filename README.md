@@ -25,7 +25,7 @@ planner-life/
 | Pacote | Stack | Porta padrao |
 | --- | --- | --- |
 | `@planner-life/core` | NestJS + `node:sqlite` | 4000 |
-| `@planner-life/agent` | NestJS + `@anthropic-ai/sdk` | 4100 |
+| `@planner-life/agent` | NestJS + Groq/Gemini/Claude (plugavel) | 4100 |
 | `@planner-life/p2p-node` | libp2p (TCP + mDNS + gossipsub) | 15000 (TCP) |
 | `@planner-life/web` | Next.js (App Router) | 3000 |
 
@@ -37,7 +37,7 @@ Pre-requisitos: Node.js 22.5+ (usa `node:sqlite`, ainda experimental) e
 ```bash
 pnpm install
 cp .env.example .env
-# preencha ANTHROPIC_API_KEY no .env
+# preencha GROQ_API_KEY e/ou GEMINI_API_KEY no .env (veja a secao abaixo)
 ```
 
 Build do pacote compartilhado (necessario antes de rodar core/agent):
@@ -54,6 +54,26 @@ pnpm dev:core   # http://localhost:4000
 pnpm dev:agent  # http://localhost:4100
 pnpm dev:web    # http://localhost:3000
 ```
+
+### Provider de IA (free tier por padrao)
+
+O `@planner-life/agent` nao esta preso a um modelo. Ele escolhe o provider
+em tempo de execucao, na seguinte ordem de prioridade (todas com free
+tier, exceto a ultima):
+
+1. **Groq** (`GROQ_API_KEY`) - modelos abertos (Llama etc.) com free tier
+   generoso e latencia muito baixa. Gere uma chave em
+   https://console.groq.com/keys
+2. **Gemini** (`GEMINI_API_KEY`) - free tier do Google AI Studio. Gere uma
+   chave em https://aistudio.google.com/apikey
+3. **Anthropic/Claude** (`ANTHROPIC_API_KEY`) - pago, mantido como opcao.
+
+Basta preencher a chave da opcao que voce quiser usar no `.env` -- o
+agente detecta sozinho qual delas esta configurada. Para forcar uma opcao
+especifica (por exemplo, se voce tiver mais de uma chave preenchida), use
+`AGENT_PROVIDER=groq|gemini|anthropic`. Os nomes de modelo (`GROQ_MODEL`,
+`GEMINI_MODEL`, `ANTHROPIC_MODEL`) tambem sao configuraveis, ja que os
+catalogos de modelos gratuitos mudam com frequencia.
 
 Para conversar com o Personal Agent direto pelo terminal (sem passar pela
 web):
@@ -79,7 +99,8 @@ para o `p2p-node` local, propagando para os outros dispositivos.
 ## O que ja funciona no v0.1
 
 - [x] Planner Core com projetos, tarefas, memoria e log de eventos (SQLite local)
-- [x] Personal Agent com Claude usando tool-use para criar/listar tarefas e
+- [x] Personal Agent com tool-use (Groq, Gemini ou Claude -- escolhido
+      automaticamente pela chave configurada) para criar/listar tarefas e
       projetos e salvar memoria, chamando a API do core
 - [x] Interface web minima (dashboard com agenda do dia, projetos e botao
       "Planejar meu dia")

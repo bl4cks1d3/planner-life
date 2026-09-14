@@ -1,6 +1,27 @@
-import type Anthropic from "@anthropic-ai/sdk";
-
 export const CORE_API_URL = process.env.CORE_API_URL ?? "http://localhost:4000";
+
+export const SYSTEM_PROMPT = `Voce e o Personal Agent do Planner Life, um sistema operacional pessoal de IA.
+Seu papel e ajudar o usuario a organizar tarefas, projetos e memoria pessoal.
+Use as ferramentas disponiveis sempre que precisar criar, listar ou concluir
+tarefas e projetos, ou salvar algo importante na memoria. Responda sempre em
+portugues, de forma direta e util. Nao invente dados: se precisar de uma
+informacao que so existe no Planner Core, use a ferramenta apropriada.`;
+
+/**
+ * Schema neutro de ferramenta (JSON Schema puro), independente de provedor.
+ * Cada provider (Anthropic, Groq/OpenAI, Gemini) adapta isso para o formato
+ * que espera -- assim trocar de modelo de IA nunca exige duplicar a
+ * definicao das ferramentas.
+ */
+export interface AgentTool {
+  name: string;
+  description: string;
+  parameters: {
+    type: "object";
+    properties: Record<string, unknown>;
+    required?: string[];
+  };
+}
 
 /**
  * Definicao das ferramentas que o Personal Agent pode usar. Cada uma delas
@@ -8,11 +29,11 @@ export const CORE_API_URL = process.env.CORE_API_URL ?? "http://localhost:4000";
  * diretamente, entao qualquer runtime de agente (PicoClaw, Hermes, etc.)
  * pode ser trocado no futuro sem perder essa integracao.
  */
-export const AGENT_TOOLS: Anthropic.Tool[] = [
+export const AGENT_TOOLS: AgentTool[] = [
   {
     name: "create_task",
     description: "Cria uma nova tarefa no Planner Life.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         title: { type: "string", description: "Titulo da tarefa" },
@@ -26,7 +47,7 @@ export const AGENT_TOOLS: Anthropic.Tool[] = [
   {
     name: "list_tasks",
     description: "Lista tarefas existentes, opcionalmente filtrando por status ou projeto.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         status: {
@@ -40,7 +61,7 @@ export const AGENT_TOOLS: Anthropic.Tool[] = [
   {
     name: "complete_task",
     description: "Marca uma tarefa como concluida.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         taskId: { type: "string", description: "ID da tarefa" },
@@ -51,7 +72,7 @@ export const AGENT_TOOLS: Anthropic.Tool[] = [
   {
     name: "create_project",
     description: "Cria um novo projeto no Planner Life.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         name: { type: "string" },
@@ -63,13 +84,13 @@ export const AGENT_TOOLS: Anthropic.Tool[] = [
   {
     name: "list_projects",
     description: "Lista todos os projetos e seu progresso.",
-    input_schema: { type: "object", properties: {} },
+    parameters: { type: "object", properties: {} },
   },
   {
     name: "save_memory",
     description:
       "Salva uma informacao importante na memoria de longo prazo do usuario (preferencias, fatos, contexto recorrente).",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         content: { type: "string" },
