@@ -73,6 +73,7 @@ export interface Paper {
   source?: string;
   status: PaperStatus;
   researchLineId?: string;
+  notePath?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -371,7 +372,9 @@ export async function createMessage(input: {
   return res.json();
 }
 
-export async function getMessageBody(messageId: string): Promise<{ from: string; subject: string; body: string }> {
+export async function getMessageBody(
+  messageId: string
+): Promise<{ from: string; subject: string; text: string; html: string }> {
   const res = await fetch(`${CORE_API_URL}/integrations/google/gmail/${encodeURIComponent(messageId)}/body`, {
     cache: "no-store",
   });
@@ -386,6 +389,18 @@ export async function setMessageHandled(messageId: string, handled: boolean): Pr
     body: JSON.stringify({ handled }),
   });
   if (!res.ok) throw new Error("falha ao atualizar mensagem");
+  return res.json();
+}
+
+export async function deleteMessage(messageId: string): Promise<void> {
+  const res = await fetch(`${CORE_API_URL}/messages/${messageId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("falha ao excluir mensagem");
+}
+
+/** So limpa a copia local do inbox no Planner -- nunca mexe no Gmail de verdade. */
+export async function clearInbox(): Promise<{ cleared: number }> {
+  const res = await fetch(`${CORE_API_URL}/messages`, { method: "DELETE" });
+  if (!res.ok) throw new Error("falha ao limpar o inbox");
   return res.json();
 }
 
@@ -507,6 +522,44 @@ export async function getCalendarEvents(limit = 10): Promise<CalendarEvent[]> {
   }
 }
 
+export async function createCalendarEvent(input: {
+  title: string;
+  start: string;
+  end: string;
+  description?: string;
+  account?: string;
+}): Promise<CalendarEvent> {
+  const res = await fetch(`${CORE_API_URL}/integrations/google/calendar/events`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao criar evento");
+  return res.json();
+}
+
+export async function updateCalendarEvent(
+  id: string,
+  input: { title?: string; start?: string; end?: string; description?: string; account?: string }
+): Promise<CalendarEvent> {
+  const res = await fetch(`${CORE_API_URL}/integrations/google/calendar/events/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao editar evento");
+  return res.json();
+}
+
+export async function deleteCalendarEvent(id: string, account?: string): Promise<void> {
+  const params = new URLSearchParams(account ? { account } : {});
+  const res = await fetch(
+    `${CORE_API_URL}/integrations/google/calendar/events/${encodeURIComponent(id)}?${params.toString()}`,
+    { method: "DELETE" }
+  );
+  if (!res.ok) throw new Error("falha ao excluir evento");
+}
+
 export type GoogleTaskStatus = "needsAction" | "completed";
 
 export interface GoogleTask {
@@ -573,6 +626,34 @@ export async function sendChat(message: string): Promise<string> {
   return data.reply;
 }
 
+export interface ClaudeCodeAction {
+  id: string;
+  prompt: string;
+  cwd: string;
+  status: "pending" | "running" | "done" | "error" | "rejected";
+  createdAt: string;
+  output?: string;
+  error?: string;
+}
+
+export async function getPendingClaudeCodeActions(): Promise<ClaudeCodeAction[]> {
+  const res = await fetch(`${AGENT_API_URL}/claude-code/pending`, { cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function confirmClaudeCodeAction(id: string): Promise<ClaudeCodeAction> {
+  const res = await fetch(`${AGENT_API_URL}/claude-code/${id}/confirm`, { method: "POST" });
+  if (!res.ok) throw new Error("falha ao confirmar o pedido do Claude Code");
+  return res.json();
+}
+
+export async function rejectClaudeCodeAction(id: string): Promise<ClaudeCodeAction> {
+  const res = await fetch(`${AGENT_API_URL}/claude-code/${id}/reject`, { method: "POST" });
+  if (!res.ok) throw new Error("falha ao rejeitar o pedido do Claude Code");
+  return res.json();
+}
+
 export async function speak(text: string): Promise<Blob> {
   const res = await fetch(`${VOICE_API_URL}/speak`, {
     method: "POST",
@@ -581,4 +662,69 @@ export async function speak(text: string): Promise<Blob> {
   });
   if (!res.ok) throw new Error("falha ao gerar audio (voz)");
   return res.blob();
+}
+
+export interface AgentNotification {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: string;
+}
+
+export async function getPendingNotifications(): Promise<AgentNotification[]> {
+  try {
+    const res = await fetch(`${AGENT_API_URL}/notifications/pending`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function ackNotification(id: string): Promise<void> {
+  await fetch(`${AGENT_API_URL}/notifications/${id}/ack`, { method: "POST" }).catch(() => undefined);
+}
+
+export interface VaultNoteMeta {
+  path: string;
+  title: string;
+  updatedAt: string;
+  excerpt?: string;
+}
+
+export interface VaultNote extends VaultNoteMeta {
+  content: string;
+}
+
+export async function getVaultNotes(): Promise<VaultNoteMeta[]> {
+  const res = await fetch(`${CORE_API_URL}/vault/notes`, { cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function getVaultNote(path: string): Promise<VaultNote> {
+  const res = await fetch(`${CORE_API_URL}/vault/note?path=${encodeURIComponent(path)}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("falha ao ler a nota");
+  return res.json();
+}
+
+export async function saveVaultNote(path: string, content: string): Promise<VaultNoteMeta> {
+  const res = await fetch(`${CORE_API_URL}/vault/note`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path, content }),
+  });
+  if (!res.ok) throw new Error("falha ao salvar a nota");
+  return res.json();
+}
+
+export async function deleteVaultNote(path: string): Promise<void> {
+  const res = await fetch(`${CORE_API_URL}/vault/note?path=${encodeURIComponent(path)}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("falha ao excluir a nota");
+}
+
+export async function searchVaultNotes(query: string): Promise<VaultNoteMeta[]> {
+  const res = await fetch(`${CORE_API_URL}/vault/search?q=${encodeURIComponent(query)}`, { cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json();
 }

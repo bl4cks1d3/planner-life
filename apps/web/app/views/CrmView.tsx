@@ -33,9 +33,23 @@ export interface CrmViewProps {
 export default function CrmView({ clients, onChange }: CrmViewProps) {
   const [showNew, setShowNew] = useState(false);
   const [draft, setDraft] = useState({ name: "", value: "", nextAction: "" });
+  const [view, setView] = useState<"kanban" | "tabela">("kanban");
+  const [dragOverStage, setDragOverStage] = useState<ClientStage | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [edit, setEdit] = useState({ stage: "lead" as ClientStage, value: "", nextAction: "" });
+
+  // O id do cliente arrastado viaja pelo DataTransfer nativo do evento, nao
+  // por estado do React -- assim nao depende de um re-render acontecer
+  // entre o dragstart e o drop (o que quebraria em drags rapidos).
+  async function handleDropOnStage(id: string, stage: ClientStage) {
+    setDragOverStage(null);
+    if (!id) return;
+    const client = clients.find((c) => c.id === id);
+    if (!client || client.stage === stage) return;
+    await updateClient(id, { stage });
+    onChange();
+  }
 
   const funnel = STAGES.map((s) => {
     const inStage = clients.filter((c) => c.stage === s.key);
@@ -81,9 +95,25 @@ export default function CrmView({ clients, onChange }: CrmViewProps) {
           <div className="view-kicker">CRM</div>
           <h1 className="view-title">Clientes</h1>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowNew((v) => !v)}>
-          {showNew ? "Cancelar" : "+ Novo cliente"}
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <div className="view-toggle">
+            <button
+              className={`view-toggle-btn ${view === "kanban" ? "active" : ""}`}
+              onClick={() => setView("kanban")}
+            >
+              Kanban
+            </button>
+            <button
+              className={`view-toggle-btn ${view === "tabela" ? "active" : ""}`}
+              onClick={() => setView("tabela")}
+            >
+              Tabela
+            </button>
+          </div>
+          <button className="btn btn-primary" onClick={() => setShowNew((v) => !v)}>
+            {showNew ? "Cancelar" : "+ Novo cliente"}
+          </button>
+        </div>
       </div>
 
       {showNew && (
@@ -126,6 +156,91 @@ export default function CrmView({ clients, onChange }: CrmViewProps) {
         ))}
       </div>
 
+      {view === "kanban" && (
+        <div className="kanban-board">
+          {STAGES.map((s) => {
+            const stageClients = clients.filter((c) => c.stage === s.key);
+            return (
+              <div
+                key={s.key}
+                className={`kanban-column ${dragOverStage === s.key ? "drag-over" : ""}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOverStage(s.key);
+                }}
+                onDragLeave={() => setDragOverStage((cur) => (cur === s.key ? null : cur))}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleDropOnStage(e.dataTransfer.getData("text/plain"), s.key);
+                }}
+              >
+                <div className="kanban-column-header">
+                  <span>{s.label}</span>
+                  <span className="kanban-column-count">{stageClients.length}</span>
+                </div>
+                <div className="kanban-cards">
+                  {stageClients.map((c) =>
+                    editingId === c.id ? (
+                      <div key={c.id} className="kanban-card editing">
+                        <input
+                          className="chat-input"
+                          type="number"
+                          placeholder="Valor (R$)"
+                          value={edit.value}
+                          onChange={(e) => setEdit((s2) => ({ ...s2, value: e.target.value }))}
+                        />
+                        <input
+                          className="chat-input"
+                          placeholder="Próxima ação"
+                          value={edit.nextAction}
+                          onChange={(e) => setEdit((s2) => ({ ...s2, nextAction: e.target.value }))}
+                        />
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button className="btn btn-primary" onClick={() => saveEdit(c.id)}>
+                            Salvar
+                          </button>
+                          <button className="btn btn-secondary" onClick={() => setEditingId(null)}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        key={c.id}
+                        className="kanban-card"
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData("text/plain", c.id);
+                          e.dataTransfer.effectAllowed = "move";
+                        }}
+                        onClick={() => startEdit(c)}
+                      >
+                        <div className="kanban-card-name">{c.name}</div>
+                        <div className="kanban-card-value">{formatBRL(c.value)}</div>
+                        {c.nextAction && <div className="kanban-card-action">{c.nextAction}</div>}
+                        {c.nextActionAt && <div className="kanban-card-date">{formatDate(c.nextActionAt)}</div>}
+                        <button
+                          className="chat-listen"
+                          style={{ marginTop: 4 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(c.id);
+                          }}
+                        >
+                          excluir
+                        </button>
+                      </div>
+                    )
+                  )}
+                  {stageClients.length === 0 && <div className="kanban-empty">Arraste um cliente para cá</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {view === "tabela" && (
       <div className="pad-24" style={{ overflowX: "auto" }}>
         <table className="table" style={{ minWidth: 640 }}>
           <thead>
@@ -208,6 +323,7 @@ export default function CrmView({ clients, onChange }: CrmViewProps) {
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }

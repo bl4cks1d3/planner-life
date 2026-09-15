@@ -11,7 +11,9 @@ import {
 const KEY_PREFIX = "google:";
 const SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
-  "https://www.googleapis.com/auth/calendar.readonly",
+  // calendar (nao so calendar.readonly) -- o agente cria/move/cancela evento,
+  // nao so le. Contas conectadas antes dessa mudanca precisam reconectar.
+  "https://www.googleapis.com/auth/calendar",
   "https://www.googleapis.com/auth/tasks",
   "https://www.googleapis.com/auth/userinfo.email",
 ].join(" ");

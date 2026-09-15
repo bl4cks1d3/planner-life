@@ -2,17 +2,13 @@
 
 import { Fragment, useState } from "react";
 import {
-  createGoogleTask,
   createProject,
   createTask,
-  deleteGoogleTask,
   deleteProject,
   deleteTask,
   setTaskStatus,
-  updateGoogleTask,
   updateProject,
   updateTask,
-  type GoogleTask,
   type Project,
   type Task,
 } from "@/lib/api";
@@ -20,40 +16,12 @@ import {
 export interface ProjetosViewProps {
   projects: Project[];
   tasks: Task[];
-  googleTasks: GoogleTask[];
   onChange: () => void;
 }
 
-export default function ProjetosView({ projects, tasks, googleTasks, onChange }: ProjetosViewProps) {
+export default function ProjetosView({ projects, tasks, onChange }: ProjetosViewProps) {
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProject, setNewProject] = useState({ name: "", goal: "" });
-
-  const [newGTask, setNewGTask] = useState("");
-  const [editingGTaskId, setEditingGTaskId] = useState<string | null>(null);
-  const [editGTask, setEditGTask] = useState("");
-
-  async function handleCreateGoogleTask() {
-    if (!newGTask.trim()) return;
-    await createGoogleTask({ title: newGTask.trim() });
-    setNewGTask("");
-    onChange();
-  }
-
-  async function toggleGoogleTask(t: GoogleTask) {
-    await updateGoogleTask(t.id, { status: t.status === "completed" ? "needsAction" : "completed" });
-    onChange();
-  }
-
-  async function saveEditGTask(id: string) {
-    await updateGoogleTask(id, { title: editGTask.trim() });
-    setEditingGTaskId(null);
-    onChange();
-  }
-
-  async function handleDeleteGoogleTask(id: string) {
-    await deleteGoogleTask(id);
-    onChange();
-  }
 
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [editProject, setEditProject] = useState({ name: "", goal: "", progress: "0" });
@@ -341,79 +309,6 @@ export default function ProjetosView({ projects, tasks, googleTasks, onChange }:
             )}
           </tbody>
         </table>
-      </div>
-
-      <div className="section-head" style={{ borderTop: "1px solid var(--color-divider)" }}>
-        <h2>Google Tasks</h2>
-        <span className="section-meta">CRUD completo, sincronizado com a conta Google</span>
-      </div>
-      {googleTasks.map((t) =>
-        editingGTaskId === t.id ? (
-          <div key={t.id} className="row-divider" style={{ display: "flex", gap: 8, padding: "10px 24px" }}>
-            <input
-              className="chat-input"
-              style={{ flex: 1 }}
-              value={editGTask}
-              onChange={(e) => setEditGTask(e.target.value)}
-            />
-            <button className="btn btn-primary" onClick={() => saveEditGTask(t.id)}>
-              Salvar
-            </button>
-            <button className="btn btn-secondary" onClick={() => setEditingGTaskId(null)}>
-              Cancelar
-            </button>
-          </div>
-        ) : (
-          <div
-            key={t.id}
-            className="row-divider"
-            style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 24px" }}
-          >
-            <input type="checkbox" checked={t.status === "completed"} onChange={() => toggleGoogleTask(t)} />
-            <span
-              style={{
-                flex: 1,
-                textDecoration: t.status === "completed" ? "line-through" : "none",
-                color: t.status === "completed" ? "var(--color-neutral-600)" : "var(--color-text)",
-              }}
-            >
-              {t.title}
-            </span>
-            <span style={{ fontSize: 11, color: "var(--color-neutral-700)" }}>{t.account}</span>
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                setEditingGTaskId(t.id);
-                setEditGTask(t.title);
-              }}
-            >
-              Editar
-            </button>
-            <button className="btn btn-secondary" onClick={() => handleDeleteGoogleTask(t.id)}>
-              Excluir
-            </button>
-          </div>
-        )
-      )}
-      {googleTasks.length === 0 && (
-        <p className="pad-24" style={{ color: "var(--color-neutral-700)", fontSize: 14 }}>
-          Nenhuma tarefa no Google Tasks (ou nenhuma conta Google conectada ainda).
-        </p>
-      )}
-      <div className="pad-24" style={{ display: "flex", gap: 8 }}>
-        <input
-          className="chat-input"
-          style={{ flex: 1 }}
-          placeholder="Nova tarefa no Google Tasks"
-          value={newGTask}
-          onChange={(e) => setNewGTask(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleCreateGoogleTask();
-          }}
-        />
-        <button className="btn btn-primary" onClick={handleCreateGoogleTask}>
-          + Adicionar
-        </button>
       </div>
     </div>
   );

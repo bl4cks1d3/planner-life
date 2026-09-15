@@ -1,7 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { GOOGLE_CONNECT_URL, createMessage, getMessageBody, type GoogleAccount, type InboxMessage } from "@/lib/api";
+import {
+  GOOGLE_CONNECT_URL,
+  clearInbox,
+  createMessage,
+  deleteMessage,
+  getMessageBody,
+  type GoogleAccount,
+  type InboxMessage,
+} from "@/lib/api";
+import HtmlEmailFrame from "../html-email-frame";
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
@@ -26,10 +35,11 @@ export default function InboxView({
 }: InboxViewProps) {
   const connected = googleAccounts.length > 0;
   const [openId, setOpenId] = useState<string | null>(null);
-  const [bodies, setBodies] = useState<Record<string, string>>({});
+  const [bodies, setBodies] = useState<Record<string, { text: string; html: string }>>({});
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [draft, setDraft] = useState({ from: "", subject: "", snippet: "" });
+  const [clearing, setClearing] = useState(false);
 
   async function handleCreate() {
     if (!draft.from.trim() || !draft.subject.trim()) return;
@@ -52,12 +62,31 @@ export default function InboxView({
     if (bodies[m.id] || !m.id.startsWith("gmail-")) return;
     setLoadingId(m.id);
     try {
-      const { body } = await getMessageBody(m.id);
-      setBodies((prev) => ({ ...prev, [m.id]: body }));
+      const { text, html } = await getMessageBody(m.id);
+      setBodies((prev) => ({ ...prev, [m.id]: { text, html } }));
     } catch (err) {
-      setBodies((prev) => ({ ...prev, [m.id]: err instanceof Error ? err.message : "falha ao ler o e-mail" }));
+      const message = err instanceof Error ? err.message : "falha ao ler o e-mail";
+      setBodies((prev) => ({ ...prev, [m.id]: { text: message, html: "" } }));
     } finally {
       setLoadingId(null);
+    }
+  }
+
+  async function handleDeleteMessage(id: string) {
+    await deleteMessage(id);
+    onChange();
+  }
+
+  async function handleClearInbox() {
+    if (!confirm("Limpar todas as mensagens do inbox no Planner? Isso só apaga a cópia local -- o Gmail de verdade não é alterado, e uma nova sincronização traz as mensagens de volta.")) {
+      return;
+    }
+    setClearing(true);
+    try {
+      await clearInbox();
+      onChange();
+    } finally {
+      setClearing(false);
     }
   }
 
@@ -84,6 +113,11 @@ export default function InboxView({
           <a href={GOOGLE_CONNECT_URL} className="btn btn-secondary">
             + Conectar conta do Gmail
           </a>
+          {messages.length > 0 && (
+            <button className="btn btn-secondary" onClick={handleClearInbox} disabled={clearing}>
+              {clearing ? "Limpando…" : "🗑 Limpar inbox"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -162,24 +196,34 @@ export default function InboxView({
                 <button className="btn btn-secondary" onClick={() => onToggleHandled(m)}>
                   {m.handled ? "Desmarcar" : "Tratada"}
                 </button>
+                <button className="btn btn-secondary" onClick={() => handleDeleteMessage(m.id)}>
+                  Excluir
+                </button>
               </div>
             </div>
           </div>
           {openId === m.id && (
-            <div
-              style={{
-                marginTop: 12,
-                padding: 14,
-                background: "var(--color-neutral-100)",
-                borderRadius: "var(--radius-sm)",
-                fontSize: 13,
-                lineHeight: 1.6,
-                whiteSpace: "pre-wrap",
-                maxHeight: 320,
-                overflowY: "auto",
-              }}
-            >
-              {loadingId === m.id ? "Carregando…" : bodies[m.id]}
+            <div style={{ marginTop: 12 }}>
+              {loadingId === m.id ? (
+                <div style={{ padding: 14, fontSize: 13, color: "var(--color-neutral-700)" }}>Carregando…</div>
+              ) : bodies[m.id]?.html ? (
+                <HtmlEmailFrame html={bodies[m.id].html} />
+              ) : (
+                <div
+                  style={{
+                    padding: 14,
+                    background: "var(--color-neutral-100)",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: 13,
+                    lineHeight: 1.6,
+                    whiteSpace: "pre-wrap",
+                    maxHeight: 320,
+                    overflowY: "auto",
+                  }}
+                >
+                  {bodies[m.id]?.text}
+                </div>
+              )}
             </div>
           )}
         </div>

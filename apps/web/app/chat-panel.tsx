@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 import { sendChat, speak } from "@/lib/api";
+import MicButton from "./mic-button";
+import ClaudeCodeApprovals from "./claude-code-approvals";
 
 interface ChatMessage {
   id: string;
@@ -79,6 +81,8 @@ export default function ChatPanel({ onActivity }: ChatPanelProps) {
         <div className="chat-subtitle">Contexto: tarefas, projetos, clientes, memória</div>
       </div>
 
+      <ClaudeCodeApprovals />
+
       <div className="chat-messages">
         {messages.map((m) => (
           <div key={m.id} className={`chat-bubble ${m.who === "Você" ? "me" : "agent"}`}>
@@ -125,6 +129,7 @@ export default function ChatPanel({ onActivity }: ChatPanelProps) {
             }}
             placeholder="Pergunte ou mande executar…"
           />
+          <MicButton onFinalTranscript={(text) => send(text)} onInterim={setDraft} />
           <button className="btn btn-primary" onClick={() => send(draft)} disabled={sending}>
             Enviar
           </button>

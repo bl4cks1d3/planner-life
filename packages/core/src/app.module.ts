@@ -12,6 +12,7 @@ import { MessagesModule } from "./messages/messages.module";
 import { HabitsModule } from "./habits/habits.module";
 import { GoogleModule } from "./integrations/google/google.module";
 import { P2pBridgeModule } from "./p2p-bridge/p2p-bridge.module";
+import { VaultModule } from "./vault/vault.module";
 import { AppController } from "./app.controller";
 
 @Module({
@@ -29,6 +30,7 @@ import { AppController } from "./app.controller";
     HabitsModule,
     GoogleModule,
     P2pBridgeModule,
+    VaultModule,
   ],
   controllers: [AppController],
 })

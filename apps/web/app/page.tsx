@@ -13,6 +13,7 @@ import {
   getServiceHealth,
   getSubjects,
   getTasks,
+  getVaultNotes,
 } from "@/lib/api";
 import DashboardShell from "./dashboard-shell";
 
@@ -31,6 +32,7 @@ export default async function Home() {
     googleStatus,
     calendarEvents,
     googleTasks,
+    notes,
     health,
   ] = await Promise.all([
     getProjects(),
@@ -46,6 +48,7 @@ export default async function Home() {
     getGoogleStatus(),
     getCalendarEvents(8),
     getGoogleTasks(),
+    getVaultNotes(),
     getServiceHealth(),
   ]);
 
@@ -64,6 +67,7 @@ export default async function Home() {
       googleAccounts={googleStatus.accounts}
       calendarEvents={calendarEvents}
       googleTasks={googleTasks}
+      notes={notes}
       health={health}
     />
   );

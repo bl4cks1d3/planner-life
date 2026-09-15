@@ -81,3 +81,13 @@ export function setMessageHandled(db: PlannerDb, id: string, handled: boolean): 
   db.prepare(`UPDATE messages SET handled = ? WHERE id = ?`).run(handled ? 1 : 0, id);
   return getMessage(db, id);
 }
+
+export function deleteMessage(db: PlannerDb, id: string): void {
+  db.prepare(`DELETE FROM messages WHERE id = ?`).run(id);
+}
+
+/** So limpa a copia local (tabela messages) -- nunca mexe no Gmail de verdade. */
+export function clearMessages(db: PlannerDb): number {
+  const result = db.prepare(`DELETE FROM messages`).run();
+  return Number(result.changes);
+}

@@ -50,4 +50,22 @@ export class MessagesService {
     this.eventBus.publish("message.handled", { messageId: id, handled });
     return message;
   }
+
+  remove(id: string) {
+    messagesRepo.deleteMessage(this.db, id);
+    this.eventsService.record("message.deleted", { messageId: id });
+    this.eventBus.publish("message.deleted", { messageId: id });
+  }
+
+  /**
+   * So apaga a copia local do inbox (tabela messages) -- nunca chama a API
+   * do Gmail, entao a caixa de e-mail de verdade do usuario nunca e tocada.
+   * Uma proxima sincronizacao traz de volta o que ainda estiver no Gmail.
+   */
+  clearAll() {
+    const count = messagesRepo.clearMessages(this.db);
+    this.eventsService.record("message.deleted", { count, all: true });
+    this.eventBus.publish("message.deleted", { count, all: true });
+    return { cleared: count };
+  }
 }

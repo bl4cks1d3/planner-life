@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { AGENT_TOOLS, SYSTEM_PROMPT, runTool, type AgentTool } from "./tools";
 import { McpManager } from "./mcp/mcp-manager";
 import { SkillsManager } from "./skills/skills-manager";
+import { ClaudeCodeService } from "./claude-code/claude-code.service";
 
 /**
  * Ponto unico de ferramentas que os providers de LLM enxergam: combina as
@@ -14,7 +15,8 @@ import { SkillsManager } from "./skills/skills-manager";
 export class ToolRegistry {
   constructor(
     private readonly mcp: McpManager,
-    private readonly skills: SkillsManager
+    private readonly skills: SkillsManager,
+    private readonly claudeCode: ClaudeCodeService
   ) {}
 
   list(): AgentTool[] {
@@ -27,6 +29,17 @@ export class ToolRegistry {
     }
     if (name === "use_skill") {
       return Promise.resolve(this.skills.getContent(args.name as string));
+    }
+    if (name === "run_claude_code") {
+      const action = this.claudeCode.createPending(
+        String(args.prompt ?? ""),
+        typeof args.cwd === "string" ? args.cwd : undefined
+      );
+      return Promise.resolve({
+        status: "aguardando_confirmacao",
+        actionId: action.id,
+        aviso: "Pedido registrado no dashboard. Nada foi executado ainda -- o usuario precisa confirmar.",
+      });
     }
     return runTool(name, args);
   }

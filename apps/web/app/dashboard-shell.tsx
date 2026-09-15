@@ -23,9 +23,12 @@ import {
   type ServiceHealth,
   type Subject,
   type Task,
+  type VaultNoteMeta,
 } from "@/lib/api";
 import ChatPanel from "./chat-panel";
+import MicButton from "./mic-button";
 import HojeView from "./views/HojeView";
+import TarefasView from "./views/TarefasView";
 import ProjetosView from "./views/ProjetosView";
 import CrmView from "./views/CrmView";
 import EstudosView from "./views/EstudosView";
@@ -33,16 +36,30 @@ import PesquisaView from "./views/PesquisaView";
 import InboxView from "./views/InboxView";
 import RedeView from "./views/RedeView";
 import MemoriaView from "./views/MemoriaView";
+import NotasView from "./views/NotasView";
+import NotificationsBanner from "./notifications-banner";
 
-type ViewId = "hoje" | "projetos" | "crm" | "estudos" | "pesquisa" | "inbox" | "memoria" | "rede";
+type ViewId =
+  | "hoje"
+  | "tarefas"
+  | "projetos"
+  | "crm"
+  | "estudos"
+  | "pesquisa"
+  | "inbox"
+  | "notas"
+  | "memoria"
+  | "rede";
 
 const NAV: { id: ViewId; label: string }[] = [
   { id: "hoje", label: "Hoje" },
+  { id: "tarefas", label: "Tarefas" },
   { id: "projetos", label: "Projetos" },
   { id: "crm", label: "CRM" },
   { id: "estudos", label: "Estudos" },
   { id: "pesquisa", label: "Pesquisa" },
   { id: "inbox", label: "Inbox" },
+  { id: "notas", label: "Notas" },
   { id: "memoria", label: "Memória" },
   { id: "rede", label: "Rede" },
 ];
@@ -61,6 +78,7 @@ export interface DashboardShellProps {
   googleAccounts: GoogleAccount[];
   calendarEvents: CalendarEvent[];
   googleTasks: GoogleTask[];
+  notes: VaultNoteMeta[];
   health: ServiceHealth;
 }
 
@@ -79,6 +97,7 @@ export default function DashboardShell(props: DashboardShellProps) {
     googleAccounts,
     calendarEvents,
     googleTasks,
+    notes,
     health,
   } = props;
   const router = useRouter();
@@ -90,6 +109,9 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [syncing, setSyncing] = useState(false);
 
   const pendingCount = tasks.filter((t) => t.status !== "done" && t.status !== "cancelled").length;
+  const looseTasksPendingCount = tasks.filter(
+    (t) => !t.projectId && t.status !== "done" && t.status !== "cancelled"
+  ).length;
   const unhandledCount = messages.filter((m) => !m.handled).length;
   const today = new Date().toDateString();
   const eventsTodayCount = events.filter((e) => new Date(e.createdAt).toDateString() === today).length;
@@ -97,11 +119,13 @@ export default function DashboardShell(props: DashboardShellProps) {
 
   const badges: Record<ViewId, string> = {
     hoje: `${pendingCount} pend.`,
+    tarefas: `${looseTasksPendingCount + googleTasks.filter((t) => t.status !== "completed").length} pend.`,
     projetos: String(projects.length),
     crm: String(clients.length),
     estudos: String(subjects.length),
     pesquisa: `${papers.length} artigos`,
     inbox: String(unhandledCount),
+    notas: String(notes.length),
     memoria: String(memoryEntries.length),
     rede: `${events.length} eventos`,
   };
@@ -110,8 +134,8 @@ export default function DashboardShell(props: DashboardShellProps) {
     router.refresh();
   }
 
-  async function runCommand() {
-    const text = cmd.trim();
+  async function runCommand(override?: string) {
+    const text = (override ?? cmd).trim();
     setCmd("");
     setRunning(true);
     setBannerMsg(text ? `Executando: "${text}"…` : "Planejando o dia…");
@@ -157,6 +181,7 @@ export default function DashboardShell(props: DashboardShellProps) {
 
   return (
     <div className="app-shell">
+      <NotificationsBanner />
       <aside className="sidebar">
         <div className="sidebar-brand">
           <div className="sidebar-brand-name">Planner Life</div>
@@ -221,7 +246,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         </div>
       </aside>
 
-      <main className="view-main" style={{ display: "flex", flexDirection: "column" }}>
+      <main className="main-shell">
         <div className="topbar">
           <div className="topbar-input-wrap">
             <span className="topbar-label">Comando</span>
@@ -234,8 +259,9 @@ export default function DashboardShell(props: DashboardShellProps) {
               }}
               placeholder="Planejar meu dia, criar tarefa, resumir artigo…"
             />
+            <MicButton onFinalTranscript={(text) => runCommand(text)} onInterim={setCmd} />
           </div>
-          <button className="pill-button pill-button-accent" onClick={runCommand} disabled={running}>
+          <button className="pill-button pill-button-accent" onClick={() => runCommand()} disabled={running}>
             {running ? "Executando…" : "Executar"}
           </button>
           <button className="pill-button pill-button-outline" onClick={() => setChatOpen((v) => !v)}>
@@ -263,11 +289,16 @@ export default function DashboardShell(props: DashboardShellProps) {
                 onChange={onChange}
               />
             )}
+            {view === "tarefas" && (
+              <TarefasView tasks={tasks} googleTasks={googleTasks} onChange={onChange} />
+            )}
             {view === "projetos" && (
-              <ProjetosView projects={projects} tasks={tasks} googleTasks={googleTasks} onChange={onChange} />
+              <ProjetosView projects={projects} tasks={tasks} onChange={onChange} />
             )}
             {view === "crm" && <CrmView clients={clients} onChange={onChange} />}
-            {view === "estudos" && <EstudosView subjects={subjects} tasks={tasks} onChange={onChange} />}
+            {view === "estudos" && (
+              <EstudosView subjects={subjects} tasks={tasks} onChange={onChange} />
+            )}
             {view === "pesquisa" && (
               <PesquisaView lines={researchLines} papers={papers} onChange={onChange} />
             )}
@@ -281,6 +312,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                 onChange={onChange}
               />
             )}
+            {view === "notas" && <NotasView notes={notes} onChange={onChange} />}
             {view === "memoria" && <MemoriaView entries={memoryEntries} onChange={onChange} />}
             {view === "rede" && <RedeView events={events} health={health} />}
           </div>

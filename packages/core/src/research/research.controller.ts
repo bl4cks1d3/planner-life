@@ -37,11 +37,19 @@ export class ResearchController {
   }
 
   @Post("papers")
-  createPaper(@Body() body: { title?: string; source?: string; researchLineId?: string }) {
+  createPaper(
+    @Body()
+    body: { title?: string; source?: string; researchLineId?: string; status?: string; notePath?: string }
+  ) {
     if (!body?.title) {
       throw new BadRequestException("title e obrigatorio");
     }
-    return this.researchService.createPaper(body as { title: string; source?: string; researchLineId?: string });
+    if (body.status && !VALID_PAPER_STATUSES.includes(body.status as PaperStatus)) {
+      throw new BadRequestException("status invalido");
+    }
+    return this.researchService.createPaper(
+      body as { title: string; source?: string; researchLineId?: string; status?: PaperStatus; notePath?: string }
+    );
   }
 
   @Patch("papers/:id/status")
@@ -50,6 +58,14 @@ export class ResearchController {
       throw new BadRequestException("status invalido");
     }
     return this.researchService.updatePaperStatus(id, body.status as PaperStatus);
+  }
+
+  @Patch("papers/:id/note")
+  updatePaperNote(@Param("id") id: string, @Body() body: { notePath?: string }) {
+    if (!body?.notePath) {
+      throw new BadRequestException("notePath e obrigatorio");
+    }
+    return this.researchService.updatePaperNotePath(id, body.notePath);
   }
 
   @Delete("papers/:id")

@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS papers (
   source TEXT,
   status TEXT NOT NULL DEFAULT 'na_fila',
   research_line_id TEXT REFERENCES research_lines(id),
+  note_path TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -111,11 +112,25 @@ CREATE TABLE IF NOT EXISTS integration_tokens (
 );
 `;
 
+/** Colunas adicionadas depois da criacao original da tabela -- `CREATE TABLE
+ * IF NOT EXISTS` nao altera uma tabela ja existente, entao um banco criado
+ * antes dessas colunas existirem precisa dessa migracao idempotente. */
+function migrate(db: DatabaseSync): void {
+  const hasColumn = (table: string, column: string): boolean => {
+    const rows = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    return rows.some((r) => r.name === column);
+  };
+  if (!hasColumn("papers", "note_path")) {
+    db.exec(`ALTER TABLE papers ADD COLUMN note_path TEXT`);
+  }
+}
+
 export function openDatabase(path: string): DatabaseSync {
   const absolute = resolve(path);
   mkdirSync(dirname(absolute), { recursive: true });
   const db = new DatabaseSync(absolute);
   db.exec(SCHEMA);
+  migrate(db);
   return db;
 }
 

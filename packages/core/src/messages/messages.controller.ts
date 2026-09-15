@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
 import { MessagesService } from "./messages.service";
 
 @Controller("messages")
@@ -34,5 +34,16 @@ export class MessagesController {
       throw new BadRequestException("handled deve ser um booleano");
     }
     return this.messagesService.setHandled(id, body.handled);
+  }
+
+  @Delete(":id")
+  remove(@Param("id") id: string) {
+    this.messagesService.remove(id);
+    return { ok: true };
+  }
+
+  @Delete()
+  clearAll() {
+    return this.messagesService.clearAll();
   }
 }

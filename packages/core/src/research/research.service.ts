@@ -46,7 +46,13 @@ export class ResearchService {
     return researchRepo.listPapers(this.db, { researchLineId });
   }
 
-  createPaper(input: { title: string; source?: string; researchLineId?: string }) {
+  createPaper(input: {
+    title: string;
+    source?: string;
+    researchLineId?: string;
+    status?: PaperStatus;
+    notePath?: string;
+  }) {
     const paper = researchRepo.createPaper(this.db, input);
     this.eventsService.record("paper.created", { paperId: paper.id, title: paper.title });
     this.eventBus.publish("paper.created", { paperId: paper.id, title: paper.title });
@@ -60,6 +66,16 @@ export class ResearchService {
     }
     this.eventsService.record("paper.updated", { paperId: id, status });
     this.eventBus.publish("paper.updated", { paperId: id, status });
+    return paper;
+  }
+
+  updatePaperNotePath(id: string, notePath: string) {
+    const paper = researchRepo.updatePaperNotePath(this.db, id, notePath);
+    if (!paper) {
+      throw new NotFoundException("artigo nao encontrado");
+    }
+    this.eventsService.record("paper.updated", { paperId: id, notePath });
+    this.eventBus.publish("paper.updated", { paperId: id, notePath });
     return paper;
   }
 

@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   createPaper,
   createResearchLine,
   deletePaper,
   deleteResearchLine,
+  getVaultNote,
   updatePaperStatus,
   updateResearchLine,
   type Paper,
@@ -32,6 +35,23 @@ export default function PesquisaView({ lines, papers, onChange }: PesquisaViewPr
   const [newPaper, setNewPaper] = useState({ title: "", source: "" });
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [editLine, setEditLine] = useState({ stage: "", nextStep: "" });
+  const [readingPaper, setReadingPaper] = useState<Paper | null>(null);
+  const [noteContent, setNoteContent] = useState("");
+  const [loadingNote, setLoadingNote] = useState(false);
+
+  async function openPaperNote(p: Paper) {
+    if (!p.notePath) return;
+    setReadingPaper(p);
+    setLoadingNote(true);
+    try {
+      const note = await getVaultNote(p.notePath);
+      setNoteContent(note.content);
+    } catch (err) {
+      setNoteContent(err instanceof Error ? err.message : "falha ao ler a nota");
+    } finally {
+      setLoadingNote(false);
+    }
+  }
 
   async function handleCreateLine() {
     if (!newLine.name.trim()) return;
@@ -77,6 +97,31 @@ export default function PesquisaView({ lines, papers, onChange }: PesquisaViewPr
   async function handleDeletePaper(id: string) {
     await deletePaper(id);
     onChange();
+  }
+
+  if (readingPaper) {
+    return (
+      <div>
+        <div className="view-header">
+          <div>
+            <div className="view-kicker">Research Agent</div>
+            <h1 className="view-title">{readingPaper.title}</h1>
+          </div>
+          <button className="btn btn-secondary" onClick={() => setReadingPaper(null)}>
+            ← Voltar
+          </button>
+        </div>
+        <div className="pad-24">
+          {loadingNote ? (
+            "Carregando…"
+          ) : (
+            <div className="markdown-reader">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{noteContent}</ReactMarkdown>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -201,9 +246,16 @@ export default function PesquisaView({ lines, papers, onChange }: PesquisaViewPr
             <div key={p.id} className="row-divider" style={{ padding: "13px 24px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                 <div style={{ fontSize: 14 }}>{p.title}</div>
-                <button className="chat-listen" style={{ fontSize: 11 }} onClick={() => handleDeletePaper(p.id)}>
-                  excluir
-                </button>
+                <div style={{ display: "flex", gap: 10, flex: "0 0 auto" }}>
+                  {p.notePath && (
+                    <button className="chat-listen" style={{ fontSize: 11 }} onClick={() => openPaperNote(p)}>
+                      ler
+                    </button>
+                  )}
+                  <button className="chat-listen" style={{ fontSize: 11 }} onClick={() => handleDeletePaper(p.id)}>
+                    excluir
+                  </button>
+                </div>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px", fontSize: 11, color: "var(--color-neutral-700)", marginTop: 3, alignItems: "center" }}>
                 <span>{p.source ?? "sem fonte"}</span>

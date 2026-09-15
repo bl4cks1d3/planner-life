@@ -65,6 +65,35 @@ export class GoogleController {
     return this.calendarService.listUpcoming(limit ? Number(limit) : undefined);
   }
 
+  @Post("calendar/events")
+  createEvent(
+    @Body() body: { title?: string; start?: string; end?: string; description?: string; account?: string }
+  ) {
+    if (!body?.title || !body?.start || !body?.end) {
+      throw new BadRequestException("title, start e end sao obrigatorios");
+    }
+    return this.calendarService.create({
+      title: body.title,
+      start: body.start,
+      end: body.end,
+      description: body.description,
+      account: body.account,
+    });
+  }
+
+  @Patch("calendar/events/:id")
+  updateEvent(
+    @Param("id") id: string,
+    @Body() body: { title?: string; start?: string; end?: string; description?: string; account?: string }
+  ) {
+    return this.calendarService.update(id, body);
+  }
+
+  @Delete("calendar/events/:id")
+  removeEvent(@Param("id") id: string, @Query("account") account?: string) {
+    return this.calendarService.remove(id, account).then(() => ({ ok: true }));
+  }
+
   @Get("tasks")
   listTasks(@Query("account") account?: string) {
     return this.googleTasksService.list(account);

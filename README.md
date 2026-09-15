@@ -21,7 +21,8 @@ planner-life/
 │   ├── voice/      # TTS local em portugues (Piper) - POST /speak
 │   └── p2p-node/   # No de rede P2P (libp2p) - roda no PC e no Raspberry Pi
 ├── apps/
-│   └── web/        # Dashboard (Next.js) - agenda, projetos, "Planejar meu dia"
+│   ├── web/        # Dashboard (Next.js) - agenda, projetos, "Planejar meu dia"
+│   └── desktop/    # App desktop (Electron) - a mesma dashboard numa janela nativa
 └── .mcp.json       # Servidores MCP que o Personal Agent conecta como cliente
 ```
 
@@ -58,6 +59,36 @@ pnpm dev:core   # http://localhost:4000
 pnpm dev:agent  # http://localhost:4100
 pnpm dev:web    # http://localhost:3000
 ```
+
+### App desktop (Electron)
+
+Em vez de abrir o navegador em `localhost:3000`, da pra rodar o Planner
+Life como um app de verdade, com janela e icone proprios:
+
+```bash
+pnpm desktop
+```
+
+Isso sobe o mesmo backend de `pnpm dev` (core, agent, voice, p2p-node) nos
+bastidores, mostra uma tela de carregamento enquanto os servicos locais
+ficam prontos, e abre a dashboard numa janela nativa (Electron) assim que
+tudo estiver de pe. Fechar a janela derruba o backend junto -- nao fica
+nada rodando escondido. O codigo esta em `apps/desktop/src/main.ts`.
+
+**Atalho na area de trabalho (Windows):** ja existe um em
+`C:\Users\<voce>\Desktop\Planner Life.lnk` -- clicar nele roda
+`apps/desktop/scripts/start-hidden.vbs`, que chama `start.bat` (`cd` pra
+raiz do repo + `pnpm desktop`) sem abrir nenhuma janela de console. Se
+precisar recriar o atalho (outra maquina, apagou sem querer), os scripts
+estao versionados em `apps/desktop/scripts/` -- so criar um atalho `.lnk`
+apontando pro `start-hidden.vbs`.
+
+Isso ainda e o modo desenvolvimento (o Electron so aponta pra um `pnpm dev`
+rodando de verdade). Para gerar um instalador de verdade (.exe/.dmg/AppImage)
+que empacota tudo, o proximo passo e `pnpm --filter @planner-life/desktop dist`
+(usa `electron-builder`, configurado em `apps/desktop/package.json`), o que
+exige antes buildar o Next.js em modo standalone e os servicos NestJS --
+isso ainda nao esta automatizado.
 
 ### Provider de IA (free tier por padrao)
 

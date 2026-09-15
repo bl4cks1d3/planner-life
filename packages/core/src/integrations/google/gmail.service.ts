@@ -30,19 +30,9 @@ function decodeBase64Url(data: string): string {
   return Buffer.from(normalized, "base64").toString("utf8");
 }
 
-function stripHtml(html: string): string {
-  return html
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/** Anda pela arvore de partes MIME procurando texto (prefere text/plain). */
-function extractBody(part: GmailPart | undefined): string {
-  if (!part) return "";
+/** Anda pela arvore de partes MIME procurando texto (junta plain e html separados). */
+function extractBody(part: GmailPart | undefined): { text: string; html: string } {
+  if (!part) return { text: "", html: "" };
   let plain = "";
   let html = "";
 
@@ -59,7 +49,7 @@ function extractBody(part: GmailPart | undefined): string {
   }
   walk(part);
 
-  return plain.trim() || stripHtml(html);
+  return { text: plain.trim(), html: html.trim() };
 }
 
 @Injectable()
@@ -79,14 +69,24 @@ export class GmailService {
     return res.json();
   }
 
-  /** Busca o corpo completo (texto) de um e-mail especifico -- so quando o usuario pede pra ler. */
-  async getMessageBody(email: string, gmailMessageId: string): Promise<{ from: string; subject: string; body: string }> {
+  /**
+   * Busca o corpo completo de um e-mail especifico -- so quando o usuario
+   * pede pra ler. Devolve texto e HTML separados: o dashboard renderiza o
+   * HTML (num iframe sandboxed, pra ficar igual ao e-mail de verdade sem
+   * rodar script nenhum) e cai pro texto simples se o e-mail nao tiver HTML.
+   */
+  async getMessageBody(
+    email: string,
+    gmailMessageId: string
+  ): Promise<{ from: string; subject: string; text: string; html: string }> {
     const accessToken = await this.googleAuth.getValidAccessToken(email);
     const detail = (await this.gmailFetch(`/messages/${gmailMessageId}?format=full`, accessToken)) as GmailMessageResponse;
+    const { text, html } = extractBody(detail.payload);
     return {
       from: header(detail, "From") ?? "desconhecido",
       subject: header(detail, "Subject") ?? "(sem assunto)",
-      body: extractBody(detail.payload) || detail.snippet || "(sem conteudo legivel)",
+      text: text || detail.snippet || "(sem conteudo legivel)",
+      html,
     };
   }
 

@@ -68,6 +68,7 @@ export interface Paper {
   source?: string;
   status: PaperStatus;
   researchLineId?: string;
+  notePath?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -129,6 +130,7 @@ export type PlpEventType =
   | "habit.deleted"
   | "message.synced"
   | "message.handled"
+  | "message.deleted"
   | "agent.started"
   | "agent.finished"
   | "device.connected"

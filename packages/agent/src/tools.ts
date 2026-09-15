@@ -5,12 +5,27 @@ Seu papel e ajudar o usuario a organizar tarefas, projetos, clientes (CRM),
 disciplinas, pesquisa cientifica, habitos, inbox e agenda. Voce tem acesso
 a ferramentas com CRUD completo (criar, listar, editar e excluir) para
 tarefas, projetos, clientes, disciplinas, linhas de pesquisa, artigos,
-habitos e tarefas do Google Tasks -- alem de poder ler e-mails completos
-(read_email) e a agenda do Google Calendar. Use a ferramenta apropriada
-sempre que precisar mexer em algum desses dados. Responda sempre em
-portugues, de forma direta e util. Nao invente dados: se precisar de uma
-informacao que so existe no Planner Core ou no Google, use a ferramenta
+habitos, tarefas do Google Tasks e eventos do Google Calendar (criar, mover,
+cancelar -- nao so ler) -- alem de poder ler e-mails completos (read_email)
+e ler/criar/buscar notas markdown no vault (Obsidian, se o usuario tiver
+configurado, ou uma pasta local). Use a ferramenta apropriada sempre que
+precisar mexer em algum desses dados. Responda sempre em portugues, de
+forma direta e util. Nao invente dados: se precisar de uma informacao que
+so existe no Planner Core, no Google ou no vault, use a ferramenta
 apropriada em vez de supor.
+
+Quando o usuario pedir para "pesquisar" ou "criar uma nota" sobre um
+assunto, escreva o conteudo voce mesmo (com o que sabe) em markdown e salve
+com create_note -- isso fica disponivel na aba Pesquisa do dashboard como
+um artigo/nota legivel, nao so um link. Prefira caminhos como
+"Pesquisas/<titulo>.md".
+
+Quando o usuario pedir uma tarefa de programacao/terminal de verdade (mexer
+em codigo de algum projeto, rodar um comando, corrigir um bug, criar um
+script), use a ferramenta run_claude_code para registrar um pedido pro
+Claude Code rodando no PC do usuario. Isso NAO executa nada na hora -- so
+cria um pedido pendente que aparece no dashboard, e o usuario precisa
+confirmar antes de rodar de verdade. Avise o usuario disso na sua resposta.
 
 Suas respostas sao exibidas como texto simples (sem renderizar markdown),
 entao nunca use tabelas, cabecalhos com # ou blocos de codigo. Para listas,
@@ -340,6 +355,23 @@ export const AGENT_TOOLS: AgentTool[] = [
       required: ["paperId"],
     },
   },
+  {
+    name: "create_research_note",
+    description:
+      "Escreve uma pesquisa/resumo como nota markdown no vault E cria o artigo correspondente na aba " +
+      "Pesquisa ja vinculado a ela (status 'resumido'), pronto pra ser lido como um livro/artigo no " +
+      "dashboard. Use isso (em vez de create_paper + create_note separados) sempre que o usuario pedir " +
+      "pra 'pesquisar' ou 'resumir' um assunto.",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        content: { type: "string", description: "Conteudo em markdown, comecando com '# Titulo'" },
+        researchLineId: { type: "string" },
+      },
+      required: ["title", "content"],
+    },
+  },
 
   // Habitos
   {
@@ -409,6 +441,23 @@ export const AGENT_TOOLS: AgentTool[] = [
       },
       required: ["messageId", "handled"],
     },
+  },
+  {
+    name: "delete_message",
+    description: "Exclui uma mensagem do inbox do Planner Life (so a copia local -- nao mexe no Gmail de verdade).",
+    parameters: {
+      type: "object",
+      properties: { messageId: { type: "string" } },
+      required: ["messageId"],
+    },
+  },
+  {
+    name: "clear_inbox",
+    description:
+      "Apaga TODAS as mensagens do inbox do Planner Life de uma vez (so a copia local -- nao mexe no Gmail " +
+      "de verdade, uma proxima sincronizacao traz de volta o que ainda estiver no Gmail). Use so quando o " +
+      "usuario pedir explicitamente para limpar o inbox.",
+    parameters: { type: "object", properties: {} },
   },
 
   // Google Tasks
@@ -495,6 +544,124 @@ export const AGENT_TOOLS: AgentTool[] = [
       type: "object",
       properties: { email: { type: "string" } },
       required: ["email"],
+    },
+  },
+
+  // Notas (Obsidian / vault local em markdown)
+  {
+    name: "list_notes",
+    description:
+      "Lista todas as notas markdown do vault (Obsidian, se configurado, ou a pasta local de notas). " +
+      "Retorna titulo, caminho e data de atualizacao de cada uma.",
+    parameters: { type: "object", properties: {} },
+  },
+  {
+    name: "read_note",
+    description: "Le o conteudo completo de uma nota markdown do vault.",
+    parameters: {
+      type: "object",
+      properties: { path: { type: "string", description: "Caminho da nota, ex: 'Pesquisas/artigo.md'" } },
+      required: ["path"],
+    },
+  },
+  {
+    name: "search_notes",
+    description: "Busca notas do vault por titulo ou conteudo.",
+    parameters: {
+      type: "object",
+      properties: { query: { type: "string" } },
+      required: ["query"],
+    },
+  },
+  {
+    name: "create_note",
+    description:
+      "Cria (ou sobrescreve, se ja existir) uma nota markdown no vault. Use para salvar resumos, " +
+      "pesquisas, resenhas ou qualquer conteudo que o usuario queira guardar como nota.",
+    parameters: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "Caminho da nota, ex: 'Pesquisas/artigo.md' (cria pastas se precisar)" },
+        content: { type: "string", description: "Conteudo em markdown (comece com '# Titulo')" },
+      },
+      required: ["path", "content"],
+    },
+  },
+  {
+    name: "delete_note",
+    description: "Apaga uma nota do vault.",
+    parameters: {
+      type: "object",
+      properties: { path: { type: "string" } },
+      required: ["path"],
+    },
+  },
+
+  // Google Calendar (CRUD completo -- nao so leitura)
+  {
+    name: "create_calendar_event",
+    description: "Cria um evento novo no Google Calendar (calendario principal da conta).",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        start: { type: "string", description: "Data/hora de inicio em ISO 8601" },
+        end: { type: "string", description: "Data/hora de fim em ISO 8601" },
+        description: { type: "string" },
+        account: { type: "string", description: "E-mail da conta, se houver mais de uma conectada" },
+      },
+      required: ["title", "start", "end"],
+    },
+  },
+  {
+    name: "update_calendar_event",
+    description: "Move, renomeia ou edita um evento existente no Google Calendar.",
+    parameters: {
+      type: "object",
+      properties: {
+        eventId: { type: "string" },
+        title: { type: "string" },
+        start: { type: "string", description: "ISO 8601" },
+        end: { type: "string", description: "ISO 8601" },
+        description: { type: "string" },
+        account: { type: "string" },
+      },
+      required: ["eventId"],
+    },
+  },
+  {
+    name: "delete_calendar_event",
+    description: "Cancela (exclui) um evento do Google Calendar.",
+    parameters: {
+      type: "object",
+      properties: {
+        eventId: { type: "string" },
+        account: { type: "string" },
+      },
+      required: ["eventId"],
+    },
+  },
+
+  // Delegacao para o Claude Code (terminal)
+  {
+    name: "run_claude_code",
+    description:
+      "Registra um PEDIDO PENDENTE para o Claude Code rodar no terminal do PC do usuario " +
+      "(modo nao-interativo `claude -p`) -- nao executa nada ainda, so cria o pedido para o " +
+      "usuario confirmar no dashboard. Use para pedidos como 'mexe no codigo do projeto X', " +
+      "'roda os testes', 'cria um script', 'corrige esse bug' -- qualquer coisa que exija ler/editar " +
+      "arquivos ou rodar comandos de verdade na maquina. So use quando o usuario pedir uma tarefa " +
+      "de codigo/terminal explicitamente.",
+    parameters: {
+      type: "object",
+      properties: {
+        prompt: { type: "string", description: "Instrucao a enviar para o Claude Code" },
+        cwd: {
+          type: "string",
+          description: "Pasta do projeto onde rodar (default: CLAUDE_CODE_CWD do .env, ou o diretorio atual)",
+        },
+      },
+      required: ["prompt"],
     },
   },
 ];
@@ -598,6 +765,30 @@ export async function runTool(name: string, input: Record<string, unknown>): Pro
     case "delete_paper":
       return coreFetch(`/research/papers/${input.paperId}`, { method: "DELETE" });
 
+    case "create_research_note": {
+      const title = String(input.title ?? "").trim();
+      const content = String(input.content ?? "");
+      if (!title || !content) throw new Error("title e content sao obrigatorios");
+      const slug = title
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 60);
+      const notePath = `Pesquisas/${slug || "nota"}-${Date.now()}.md`;
+      await coreFetch("/vault/note", { method: "POST", body: JSON.stringify({ path: notePath, content }) });
+      return coreFetch("/research/papers", {
+        method: "POST",
+        body: JSON.stringify({
+          title,
+          status: "resumido",
+          notePath,
+          researchLineId: input.researchLineId,
+        }),
+      });
+    }
+
     case "create_habit":
       return coreFetch("/habits", { method: "POST", body: JSON.stringify(input) });
     case "list_habits":
@@ -611,13 +802,23 @@ export async function runTool(name: string, input: Record<string, unknown>): Pro
 
     case "list_messages":
       return coreFetch("/messages");
-    case "read_email":
-      return coreFetch(`/integrations/google/gmail/${encodeURIComponent(input.messageId as string)}/body`);
+    case "read_email": {
+      // So devolve o texto pro agente -- o HTML bruto e so pra renderizar
+      // no dashboard, jogar ele no contexto da IA seria ruido inutil.
+      const { html: _html, ...rest } = (await coreFetch(
+        `/integrations/google/gmail/${encodeURIComponent(input.messageId as string)}/body`
+      )) as { from: string; subject: string; text: string; html: string };
+      return rest;
+    }
     case "mark_message_handled":
       return coreFetch(`/messages/${input.messageId}/handled`, {
         method: "PATCH",
         body: JSON.stringify({ handled: input.handled }),
       });
+    case "delete_message":
+      return coreFetch(`/messages/${input.messageId}`, { method: "DELETE" });
+    case "clear_inbox":
+      return coreFetch("/messages", { method: "DELETE" });
 
     case "list_google_tasks": {
       const params = new URLSearchParams(input as Record<string, string>);
@@ -650,6 +851,33 @@ export async function runTool(name: string, input: Record<string, unknown>): Pro
       return coreFetch(`/integrations/google/accounts/${encodeURIComponent(input.email as string)}`, {
         method: "DELETE",
       });
+
+    case "list_notes":
+      return coreFetch("/vault/notes");
+    case "read_note":
+      return coreFetch(`/vault/note?path=${encodeURIComponent(input.path as string)}`);
+    case "search_notes":
+      return coreFetch(`/vault/search?q=${encodeURIComponent(input.query as string)}`);
+    case "create_note":
+      return coreFetch("/vault/note", { method: "POST", body: JSON.stringify(input) });
+    case "delete_note":
+      return coreFetch(`/vault/note?path=${encodeURIComponent(input.path as string)}`, { method: "DELETE" });
+
+    case "create_calendar_event":
+      return coreFetch("/integrations/google/calendar/events", { method: "POST", body: JSON.stringify(input) });
+    case "update_calendar_event": {
+      const { eventId, ...rest } = input;
+      return coreFetch(`/integrations/google/calendar/events/${encodeURIComponent(eventId as string)}`, {
+        method: "PATCH",
+        body: JSON.stringify(rest),
+      });
+    }
+    case "delete_calendar_event": {
+      const params = new URLSearchParams(input.account ? { account: input.account as string } : {});
+      return coreFetch(`/integrations/google/calendar/events/${encodeURIComponent(input.eventId as string)}?${params.toString()}`, {
+        method: "DELETE",
+      });
+    }
 
     default:
       throw new Error(`ferramenta desconhecida: ${name}`);
