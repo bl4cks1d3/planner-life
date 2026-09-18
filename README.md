@@ -45,6 +45,27 @@ planner-life/
 Pre-requisitos: Node.js 22.5+ (usa `node:sqlite`, ainda experimental) e
 `pnpm`.
 
+### Instalacao automatica
+
+Os scripts verificam os pre-requisitos, instalam as dependencias, criam o
+`.env` (pedindo a chave de IA, se voce quiser), compilam o pacote
+compartilhado e, opcionalmente, baixam a voz local (Piper). Podem ser
+rodados de novo sem problema.
+
+```powershell
+# Windows (PowerShell)
+powershell -ExecutionPolicy Bypass -File scripts\install.ps1
+# opcoes: -WithVoice  -Shortcut  -NoDesktop  -Yes  -CheckOnly
+```
+
+```bash
+# Linux, macOS e Raspberry Pi
+bash scripts/install.sh
+# opcoes: --with-voice  --no-desktop  --yes  --check
+```
+
+Depois: `pnpm dev` e abra http://localhost:4300. Se preferir fazer na mao:
+
 ```bash
 pnpm install
 cp .env.example .env

@@ -8,6 +8,28 @@
 
 ## 2. Primeira execução
 
+### 2.1 Instalador
+
+| Sistema | Comando | Opções |
+| --- | --- | --- |
+| Windows | `powershell -ExecutionPolicy Bypass -File scripts\install.ps1` | `-CheckOnly` `-WithVoice` `-Shortcut` `-NoDesktop` `-Yes` |
+| Linux / macOS / Raspberry Pi | `bash scripts/install.sh` | `--check` `--with-voice` `--no-desktop` `--yes` |
+
+O que fazem, em ordem (idempotente — pode rodar de novo):
+
+1. Confere **Node ≥ 22.5** (não instala Node por você) e ativa o **pnpm** via corepack se faltar.
+2. Avisa se o **Claude Code CLI** não existe (só Terminal e Pesquisa dependem dele).
+3. `pnpm install` (`--no-desktop` exclui o Electron, ~100 MB).
+4. Cria o `.env` a partir do `.env.example` **só se ele não existir**; em modo interativo pergunta a chave do Groq (ou do Gemini), sem eco. Nunca sobrescreve um `.env` existente.
+5. `pnpm --filter @planner-life/shared build`.
+6. Voz (opcional): baixa o Piper e o modelo `pt_BR` para `packages/voice/vendor/`. Fora do Windows grava `PIPER_BIN` e `PIPER_MODEL` (caminhos reais) no `.env`; em Raspberry Pi/ARM usa a voz `low`.
+7. Windows, opcional: atalho "Planner Life" na área de trabalho (`start-hidden.vbs`).
+8. Cria `data/` e mostra as pendências (chave de IA, Google, Claude Code).
+
+`--check`/`-CheckOnly` só verifica, sem alterar nada. `--yes`/`-Yes` não faz perguntas.
+
+### 2.2 Manual
+
 ```bash
 pnpm install
 cp .env.example .env            # preencha ao menos uma chave de IA
