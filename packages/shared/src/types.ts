@@ -46,8 +46,39 @@ export interface Subject {
   name: string;
   progress: number; // 0-100
   note?: string;
+  examDate?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface StudyTopic {
+  id: string;
+  subjectId: string;
+  title: string;
+  done: boolean;
+  /** Se preenchida, o topico vira uma "entrega/leitura" com prazo (nativo
+   * de Estudos -- nao depende de tarefa/projeto nenhum). */
+  dueAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScheduleBlock {
+  id: string;
+  subjectId: string;
+  dayOfWeek: number; // 0 = domingo .. 6 = sabado
+  startTime: string; // "HH:MM"
+  endTime: string; // "HH:MM"
+  createdAt: string;
+}
+
+export interface StudySession {
+  id: string;
+  subjectId?: string;
+  durationMinutes: number;
+  startedAt: string;
+  endedAt: string;
+  createdAt: string;
 }
 
 export interface ResearchLine {
@@ -131,6 +162,13 @@ export type PlpEventType =
   | "message.synced"
   | "message.handled"
   | "message.deleted"
+  | "study_topic.created"
+  | "study_topic.updated"
+  | "study_topic.deleted"
+  | "schedule_block.created"
+  | "schedule_block.deleted"
+  | "study_session.created"
+  | "study_session.deleted"
   | "agent.started"
   | "agent.finished"
   | "device.connected"

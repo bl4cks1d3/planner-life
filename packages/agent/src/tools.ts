@@ -14,11 +14,12 @@ forma direta e util. Nao invente dados: se precisar de uma informacao que
 so existe no Planner Core, no Google ou no vault, use a ferramenta
 apropriada em vez de supor.
 
-Quando o usuario pedir para "pesquisar" ou "criar uma nota" sobre um
-assunto, escreva o conteudo voce mesmo (com o que sabe) em markdown e salve
-com create_note -- isso fica disponivel na aba Pesquisa do dashboard como
-um artigo/nota legivel, nao so um link. Prefira caminhos como
-"Pesquisas/<titulo>.md".
+Quando o usuario pedir para "pesquisar", "resumir" ou "escrever sobre" um
+assunto, use SEMPRE create_research_note (nunca create_note sozinho) --
+ela salva a nota E cria o artigo vinculado na aba Pesquisa, que e onde o
+usuario vai olhar depois. Usar create_note pra isso deixa a nota orfa,
+sem aparecer em lugar nenhum do dashboard. Reserve create_note pra
+anotacoes soltas que o usuario mesmo pediu pra guardar sem ser pesquisa.
 
 Quando o usuario pedir uma tarefa de programacao/terminal de verdade (mexer
 em codigo de algum projeto, rodar um comando, corrigir um bug, criar um
@@ -240,24 +241,26 @@ export const AGENT_TOOLS: AgentTool[] = [
       properties: {
         name: { type: "string" },
         note: { type: "string", description: "Ex: media atual, observacao" },
+        examDate: { type: "string", description: "Data da proxima prova, ISO 8601 (opcional)" },
       },
       required: ["name"],
     },
   },
   {
     name: "list_subjects",
-    description: "Lista as disciplinas cadastradas e o progresso de cada uma.",
+    description: "Lista as disciplinas cadastradas, progresso e data de prova de cada uma.",
     parameters: { type: "object", properties: {} },
   },
   {
     name: "update_subject",
-    description: "Atualiza o progresso (0-100) ou a nota de uma disciplina.",
+    description: "Atualiza o progresso (0-100), a nota ou a data de prova de uma disciplina.",
     parameters: {
       type: "object",
       properties: {
         subjectId: { type: "string" },
         progress: { type: "number" },
         note: { type: "string" },
+        examDate: { type: "string", description: "ISO 8601" },
       },
       required: ["subjectId"],
     },
@@ -269,6 +272,104 @@ export const AGENT_TOOLS: AgentTool[] = [
       type: "object",
       properties: { subjectId: { type: "string" } },
       required: ["subjectId"],
+    },
+  },
+  {
+    name: "create_study_topic",
+    description:
+      "Adiciona um topico/assunto na checklist de conteudo de uma disciplina. Se vier com dueAt, vira " +
+      "uma entrega/leitura com prazo (aparece em 'Entregas e leituras' dentro de Estudos).",
+    parameters: {
+      type: "object",
+      properties: {
+        subjectId: { type: "string" },
+        title: { type: "string", description: "Ex: 'Capitulo 3 - Termodinamica' ou 'Entregar resenha'" },
+        dueAt: { type: "string", description: "ISO 8601, so se for uma entrega/leitura com prazo" },
+      },
+      required: ["subjectId", "title"],
+    },
+  },
+  {
+    name: "list_study_topics",
+    description: "Lista os topicos de estudo de uma disciplina (ou de todas, se subjectId nao for informado).",
+    parameters: {
+      type: "object",
+      properties: { subjectId: { type: "string" } },
+    },
+  },
+  {
+    name: "set_study_topic_done",
+    description: "Marca (ou desmarca) um topico de estudo como concluido.",
+    parameters: {
+      type: "object",
+      properties: { topicId: { type: "string" }, done: { type: "boolean" } },
+      required: ["topicId", "done"],
+    },
+  },
+  {
+    name: "delete_study_topic",
+    description: "Remove um topico de estudo.",
+    parameters: {
+      type: "object",
+      properties: { topicId: { type: "string" } },
+      required: ["topicId"],
+    },
+  },
+  {
+    name: "create_schedule_block",
+    description: "Adiciona um horario fixo semanal de estudo pra uma disciplina (cronograma).",
+    parameters: {
+      type: "object",
+      properties: {
+        subjectId: { type: "string" },
+        dayOfWeek: { type: "number", description: "0=domingo, 1=segunda, ... 6=sabado" },
+        startTime: { type: "string", description: "Ex: '19:00'" },
+        endTime: { type: "string", description: "Ex: '21:00'" },
+      },
+      required: ["subjectId", "dayOfWeek", "startTime", "endTime"],
+    },
+  },
+  {
+    name: "list_schedule",
+    description: "Lista o cronograma semanal de estudo (todos os horarios fixos, de todas as disciplinas).",
+    parameters: { type: "object", properties: {} },
+  },
+  {
+    name: "delete_schedule_block",
+    description: "Remove um horario fixo do cronograma de estudo.",
+    parameters: {
+      type: "object",
+      properties: { blockId: { type: "string" } },
+      required: ["blockId"],
+    },
+  },
+  {
+    name: "list_study_sessions",
+    description: "Lista as sessoes de estudo registradas (Pomodoro/tempo estudado) nos ultimos N dias.",
+    parameters: {
+      type: "object",
+      properties: { days: { type: "number", description: "Default 30" } },
+    },
+  },
+  {
+    name: "delete_study_session",
+    description: "Remove uma sessao de estudo registrada por engano.",
+    parameters: {
+      type: "object",
+      properties: { sessionId: { type: "string" } },
+      required: ["sessionId"],
+    },
+  },
+  {
+    name: "log_study_session",
+    description: "Registra manualmente uma sessao de estudo ja feita (ex: usuario diz 'estudei 30min de calculo agora').",
+    parameters: {
+      type: "object",
+      properties: {
+        subjectId: { type: "string" },
+        durationMinutes: { type: "number" },
+      },
+      required: ["durationMinutes"],
     },
   },
 
@@ -740,6 +841,48 @@ export async function runTool(name: string, input: Record<string, unknown>): Pro
     }
     case "delete_subject":
       return coreFetch(`/subjects/${input.subjectId}`, { method: "DELETE" });
+
+    case "create_study_topic":
+      return coreFetch("/study/topics", { method: "POST", body: JSON.stringify(input) });
+    case "list_study_topics": {
+      const params = new URLSearchParams(input.subjectId ? { subjectId: input.subjectId as string } : {});
+      return coreFetch(`/study/topics?${params.toString()}`);
+    }
+    case "set_study_topic_done":
+      return coreFetch(`/study/topics/${input.topicId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ done: input.done }),
+      });
+    case "delete_study_topic":
+      return coreFetch(`/study/topics/${input.topicId}`, { method: "DELETE" });
+
+    case "create_schedule_block":
+      return coreFetch("/study/schedule", { method: "POST", body: JSON.stringify(input) });
+    case "list_schedule":
+      return coreFetch("/study/schedule");
+    case "delete_schedule_block":
+      return coreFetch(`/study/schedule/${input.blockId}`, { method: "DELETE" });
+
+    case "list_study_sessions": {
+      const params = new URLSearchParams(input.days ? { days: String(input.days) } : {});
+      return coreFetch(`/study/sessions?${params.toString()}`);
+    }
+    case "delete_study_session":
+      return coreFetch(`/study/sessions/${input.sessionId}`, { method: "DELETE" });
+    case "log_study_session": {
+      const now = new Date();
+      const durationMinutes = Number(input.durationMinutes);
+      const startedAt = new Date(now.getTime() - durationMinutes * 60_000).toISOString();
+      return coreFetch("/study/sessions", {
+        method: "POST",
+        body: JSON.stringify({
+          subjectId: input.subjectId,
+          durationMinutes,
+          startedAt,
+          endedAt: now.toISOString(),
+        }),
+      });
+    }
 
     case "create_research_line":
       return coreFetch("/research/lines", { method: "POST", body: JSON.stringify(input) });

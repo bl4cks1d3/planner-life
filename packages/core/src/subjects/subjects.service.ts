@@ -17,14 +17,14 @@ export class SubjectsService {
     return subjectsRepo.listSubjects(this.db);
   }
 
-  create(input: { name: string; note?: string }) {
+  create(input: { name: string; note?: string; examDate?: string }) {
     const subject = subjectsRepo.createSubject(this.db, input);
     this.eventsService.record("subject.created", { subjectId: subject.id, name: subject.name });
     this.eventBus.publish("subject.created", { subjectId: subject.id, name: subject.name });
     return subject;
   }
 
-  update(id: string, input: { progress?: number; note?: string }) {
+  update(id: string, input: { progress?: number; note?: string; examDate?: string | null }) {
     const subject = subjectsRepo.updateSubject(this.db, id, input);
     if (!subject) {
       throw new NotFoundException("disciplina nao encontrada");

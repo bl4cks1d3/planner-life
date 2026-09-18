@@ -28,7 +28,7 @@ export type PlannerLibp2pNode = Libp2p<PubsubServices>;
 export async function createPlannerNode(
   options: PlannerNodeOptions = {}
 ): Promise<PlannerLibp2pNode> {
-  const port = options.port ?? 15000;
+  const port = options.port ?? 4400;
   const nodeName = options.nodeName ?? "planner-node";
 
   const node = await createLibp2p({

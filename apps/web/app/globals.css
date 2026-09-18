@@ -923,6 +923,76 @@ html, body {
   50% { box-shadow: 0 0 0 6px transparent; }
 }
 
+/* ── cronograma semanal (Estudos) ── */
+.schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(120px, 1fr));
+  gap: 10px;
+  padding: 16px 24px;
+  overflow-x: auto;
+}
+.schedule-day {
+  background: var(--color-neutral-100);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  min-height: 90px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.schedule-day-label {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--color-neutral-700);
+}
+.schedule-block {
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-xs);
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.schedule-block-time {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-accent-700);
+  font-weight: 600;
+}
+.schedule-block-subject {
+  font-size: 12px;
+  font-weight: 600;
+}
+@media (max-width: 900px) {
+  .schedule-grid {
+    grid-template-columns: repeat(7, minmax(100px, 1fr));
+  }
+}
+
+/* ── pomodoro ── */
+.pomodoro {
+  text-align: center;
+  padding: 10px 0;
+}
+.pomodoro-clock {
+  font-family: var(--font-heading);
+  font-size: 48px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.pomodoro-mode {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-top: 2px;
+}
+
 /* ── notificacoes proativas (toasts) ── */
 .notifications-stack {
   position: fixed;

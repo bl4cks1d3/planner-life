@@ -81,7 +81,7 @@ export default function ChatPanel({ onActivity }: ChatPanelProps) {
         <div className="chat-subtitle">Contexto: tarefas, projetos, clientes, memória</div>
       </div>
 
-      <ClaudeCodeApprovals />
+      <ClaudeCodeApprovals onChange={onActivity} />
 
       <div className="chat-messages">
         {messages.map((m) => (

@@ -9,6 +9,12 @@ rodar tanto no computador principal quanto em um Raspberry Pi.
 > contexto. Os agentes (Claude hoje, outros runtimes amanha) sao
 > componentes substituiveis.
 
+> **Documentação completa:** [docs/](docs/README.md) — especificação
+> ([SPEC](docs/SPEC.md)), [arquitetura](docs/ARCHITECTURE.md),
+> [API](docs/API.md), [modelo de dados](docs/DATA-MODEL.md),
+> [agente](docs/AGENT.md), [configuração](docs/CONFIGURATION.md) e
+> [guia de desenvolvimento](docs/DEVELOPMENT.md).
+
 ## Estrutura
 
 ```
@@ -31,8 +37,8 @@ planner-life/
 | `@planner-life/core` | NestJS + `node:sqlite` | 4000 |
 | `@planner-life/agent` | NestJS + Groq/Gemini/Claude (plugavel), harness MCP + Skills | 4100 |
 | `@planner-life/voice` | NestJS + Piper (TTS local, pt-BR) | 4200 |
-| `@planner-life/p2p-node` | libp2p (TCP + mDNS + gossipsub) | 15000 (TCP) |
-| `@planner-life/web` | Next.js (App Router) | 3000 |
+| `@planner-life/p2p-node` | libp2p (TCP + mDNS + gossipsub) | 4400 (TCP), 4401 (bridge HTTP) |
+| `@planner-life/web` | Next.js (App Router) | 4300 |
 
 ## Como rodar
 
@@ -57,12 +63,12 @@ juntos):
 ```bash
 pnpm dev:core   # http://localhost:4000
 pnpm dev:agent  # http://localhost:4100
-pnpm dev:web    # http://localhost:3000
+pnpm dev:web    # http://localhost:4300
 ```
 
 ### App desktop (Electron)
 
-Em vez de abrir o navegador em `localhost:3000`, da pra rodar o Planner
+Em vez de abrir o navegador em `localhost:4300`, da pra rodar o Planner
 Life como um app de verdade, com janela e icone proprios:
 
 ```bash
@@ -156,16 +162,21 @@ trocar de modelo nunca muda quais ferramentas ou skills estao disponiveis.
 ### Google (Gmail, Calendar, Tasks -- multi-conta)
 
 O `@planner-life/core` conecta na sua conta Google via OAuth (escopos
-`gmail.readonly`, `calendar.readonly` e `tasks`) e da acesso real a:
+`gmail.readonly`, `calendar` -- leitura e escrita --, `tasks` e
+`userinfo.email`) e da acesso real a:
 
 - **Inbox**: sincroniza as mensagens do Gmail pro inbox do Planner Life
   (`GET /messages`), com leitura do corpo completo do e-mail
   (`GET /integrations/google/gmail/:id/body`) e marcação de tratada.
 - **Agenda**: eventos de todas as agendas visiveis na conta -- a principal
   e as compartilhadas que voce ja habilitou no Google Calendar (agenda da
-  familia inclusive) -- aparecem na view Hoje.
+  familia inclusive) -- aparecem na view Hoje, e o agente pode criar,
+  mover e cancelar eventos. Contas conectadas antes do escopo de escrita
+  precisam reconectar.
 - **Google Tasks**: CRUD completo (criar/listar/editar/concluir/excluir)
-  direto na view Projetos, sem copia local (sempre busca ao vivo).
+  direto na aba Tarefas, sem copia local (sempre busca ao vivo). Tarefas
+  atrasadas ou que vencem hoje geram aviso (notificacao + som), repetido
+  a cada 1h enquanto continuarem abertas.
 
 Configure `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no `.env` (crie um
 OAuth client em https://console.cloud.google.com/apis/credentials) e
@@ -180,8 +191,9 @@ Alem de tarefas e projetos, o Planner Core tambem modela:
 
 - **CRM** (`/clients`): clientes/leads por estagio (lead/contato/proposta/
   fechado), com funil calculado a partir dos dados reais.
-- **Estudos** (`/subjects`): disciplinas com progresso; as entregas
-  reaproveitam as tarefas normais (com prazo).
+- **Estudos** (`/subjects`, `/study`): disciplinas com progresso e data de
+  prova, topicos (com prazo = entregas e leituras), cronograma semanal,
+  Pomodoro e registro de sessoes -- independente de Projetos/Tarefas.
 - **Pesquisa** (`/research/lines`, `/research/papers`): linhas de
   investigacao e fila de leitura de artigos.
 - **Habitos** (`/habits`): qualquer habito com meta e valor atual (agua,
@@ -220,9 +232,10 @@ essa e a base da "Rede P2P" da visao do projeto.
       Calendar (todas as agendas visiveis, incl. compartilhadas) e Tasks
       (CRUD ao vivo) -- multi-conta
 - [x] Voz local em portugues (Piper) com botao "Ouvir resposta" no dashboard
-- [x] Dashboard completo (Next.js): Hoje, Projetos, CRM, Estudos, Pesquisa,
-      Inbox e Rede, com chat lateral e comando rapido conversando direto
-      com o Personal Agent
+- [x] Dashboard completo (Next.js): Hoje, Tarefas, Projetos, CRM, Estudos
+      (com cronograma, topicos e Pomodoro), Pesquisa, Inbox, Notas
+      (Obsidian), Terminal (Claude Code) e Configuracoes, com chat lateral
+      e comando rapido conversando direto com o Personal Agent
 - [x] No P2P (libp2p) capaz de descobrir, conectar e trocar eventos PLP com
       outros nos na rede local - mesmo codigo roda no PC e no Raspberry Pi
 - [x] Bridge automatico `core -> p2p-node`: todo evento do

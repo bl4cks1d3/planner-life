@@ -20,7 +20,7 @@ export class P2pBridgeService implements OnModuleInit {
   constructor(private readonly eventBus: PlannerEventBus) {}
 
   private get bridgeUrl(): string {
-    return process.env.P2P_NODE_HTTP_URL ?? "http://127.0.0.1:15001";
+    return process.env.P2P_NODE_HTTP_URL ?? "http://127.0.0.1:4401";
   }
 
   onModuleInit(): void {

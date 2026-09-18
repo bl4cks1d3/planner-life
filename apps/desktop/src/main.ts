@@ -3,7 +3,7 @@ import { type ChildProcess, execFile, spawn } from "node:child_process";
 import * as path from "node:path";
 
 const REPO_ROOT = path.join(__dirname, "..", "..", "..");
-const WEB_URL = "http://localhost:3000";
+const WEB_URL = "http://localhost:4300";
 const AGENT_URL = "http://localhost:4100";
 
 const HEALTH_CHECKS = [
@@ -40,7 +40,7 @@ function spawnManaged(args: string[]): ChildProcess {
  * O app desktop nao reimplementa nada do backend -- ele so sobe os mesmos
  * processos que `pnpm dev` sobe na mao (core, agent, web, voice, p2p-node)
  * e aponta uma janela nativa pra eles, em vez do usuario abrir o navegador
- * e digitar localhost:3000.
+ * e digitar localhost:4300.
  */
 function startBackend(): void {
   spawnManaged(["dev"]);

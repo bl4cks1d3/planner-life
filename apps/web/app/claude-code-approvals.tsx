@@ -14,7 +14,11 @@ import {
  * autonomo (inclusive por comando de voz) disparando o Claude Code sem
  * ninguem no meio e um risco grande demais pra liberar sem essa checagem.
  */
-export default function ClaudeCodeApprovals() {
+export interface ClaudeCodeApprovalsProps {
+  onChange?: () => void;
+}
+
+export default function ClaudeCodeApprovals({ onChange }: ClaudeCodeApprovalsProps) {
   const [pending, setPending] = useState<ClaudeCodeAction[]>([]);
   const [resolved, setResolved] = useState<ClaudeCodeAction[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -39,6 +43,7 @@ export default function ClaudeCodeApprovals() {
       const result = await confirmClaudeCodeAction(id);
       setPending((prev) => prev.filter((a) => a.id !== id));
       setResolved((prev) => [result, ...prev].slice(0, 5));
+      onChange?.();
     } finally {
       setBusyId(null);
     }
@@ -76,9 +81,13 @@ export default function ClaudeCodeApprovals() {
       {resolved.map((a) => (
         <div key={a.id} className={`claude-code-card resolved ${a.status}`}>
           <div className="claude-code-card-label">
-            {a.status === "done" ? "Claude Code executou" : "Erro no Claude Code"}
+            {a.status !== "done"
+              ? "Erro no Claude Code"
+              : a.kind === "research"
+                ? "Pesquisa salva -- veja em Pesquisa"
+                : "Claude Code executou"}
           </div>
-          <div className="claude-code-card-prompt">{a.prompt}</div>
+          <div className="claude-code-card-prompt">{a.kind === "research" ? a.meta?.theme : a.prompt}</div>
           <div className="claude-code-card-output">{a.output || a.error}</div>
         </div>
       ))}

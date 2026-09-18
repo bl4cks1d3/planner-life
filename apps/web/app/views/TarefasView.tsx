@@ -35,6 +35,19 @@ export default function TarefasView({ tasks, googleTasks, onChange }: TarefasVie
   const [newGTask, setNewGTask] = useState({ title: "", due: "" });
   const [editingGTaskId, setEditingGTaskId] = useState<string | null>(null);
   const [editGTask, setEditGTask] = useState({ title: "", due: "" });
+  const [syncing, setSyncing] = useState(false);
+
+  // O Google Tasks ja e buscado ao vivo (sem cache) a cada onChange --
+  // "sincronizar" aqui e so dar um feedback visual claro de que buscou de
+  // novo agora, igual ao botao de sincronizar do Gmail no Inbox.
+  async function handleSyncGoogleTasks() {
+    setSyncing(true);
+    try {
+      onChange();
+    } finally {
+      setTimeout(() => setSyncing(false), 600);
+    }
+  }
 
   function dateToGoogleDue(date: string): string | undefined {
     return date ? new Date(`${date}T00:00:00.000Z`).toISOString() : undefined;
@@ -190,7 +203,12 @@ export default function TarefasView({ tasks, googleTasks, onChange }: TarefasVie
 
       <div className="section-head" style={{ borderTop: "1px solid var(--color-divider)" }}>
         <h2>Google Tasks</h2>
-        <span className="section-meta">CRUD completo, sincronizado com a conta Google</span>
+        <span className="section-meta" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          CRUD completo, sincronizado com a conta Google
+          <button className="btn btn-secondary" onClick={handleSyncGoogleTasks} disabled={syncing}>
+            {syncing ? "Sincronizando…" : "🔄 Sincronizar"}
+          </button>
+        </span>
       </div>
       {googleTasks.map((t) =>
         editingGTaskId === t.id ? (

@@ -7,6 +7,7 @@ interface SubjectRow {
   name: string;
   progress: number;
   note: string | null;
+  exam_date: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -17,24 +18,26 @@ function rowToSubject(row: SubjectRow): Subject {
     name: row.name,
     progress: row.progress,
     note: row.note ?? undefined,
+    examDate: row.exam_date ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
-export function createSubject(db: PlannerDb, input: { name: string; note?: string }): Subject {
+export function createSubject(db: PlannerDb, input: { name: string; note?: string; examDate?: string }): Subject {
   const now = new Date().toISOString();
   const row: SubjectRow = {
     id: randomUUID(),
     name: input.name,
     progress: 0,
     note: input.note ?? null,
+    exam_date: input.examDate ?? null,
     created_at: now,
     updated_at: now,
   };
   db.prepare(
-    `INSERT INTO subjects (id, name, progress, note, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(row.id, row.name, row.progress, row.note, row.created_at, row.updated_at);
+    `INSERT INTO subjects (id, name, progress, note, exam_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).run(row.id, row.name, row.progress, row.note, row.exam_date, row.created_at, row.updated_at);
   return rowToSubject(row);
 }
 
@@ -53,14 +56,15 @@ export function getSubject(db: PlannerDb, id: string): Subject | undefined {
 export function updateSubject(
   db: PlannerDb,
   id: string,
-  input: { progress?: number; note?: string }
+  input: { progress?: number; note?: string; examDate?: string | null }
 ): Subject | undefined {
   const current = getSubject(db, id);
   if (!current) return undefined;
   const now = new Date().toISOString();
-  db.prepare(`UPDATE subjects SET progress = ?, note = ?, updated_at = ? WHERE id = ?`).run(
+  db.prepare(`UPDATE subjects SET progress = ?, note = ?, exam_date = ?, updated_at = ? WHERE id = ?`).run(
     input.progress ?? current.progress,
     input.note ?? current.note ?? null,
+    input.examDate === undefined ? (current.examDate ?? null) : input.examDate,
     now,
     id
   );
@@ -68,5 +72,7 @@ export function updateSubject(
 }
 
 export function deleteSubject(db: PlannerDb, id: string): void {
+  db.prepare(`DELETE FROM study_topics WHERE subject_id = ?`).run(id);
+  db.prepare(`DELETE FROM schedule_blocks WHERE subject_id = ?`).run(id);
   db.prepare(`DELETE FROM subjects WHERE id = ?`).run(id);
 }

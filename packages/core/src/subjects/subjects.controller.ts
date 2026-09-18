@@ -11,15 +11,15 @@ export class SubjectsController {
   }
 
   @Post()
-  create(@Body() body: { name?: string; note?: string }) {
+  create(@Body() body: { name?: string; note?: string; examDate?: string }) {
     if (!body?.name) {
       throw new BadRequestException("name e obrigatorio");
     }
-    return this.subjectsService.create({ name: body.name, note: body.note });
+    return this.subjectsService.create({ name: body.name, note: body.note, examDate: body.examDate });
   }
 
   @Patch(":id")
-  update(@Param("id") id: string, @Body() body: { progress?: number; note?: string }) {
+  update(@Param("id") id: string, @Body() body: { progress?: number; note?: string; examDate?: string | null }) {
     if (body.progress !== undefined && (body.progress < 0 || body.progress > 100)) {
       throw new BadRequestException("progress deve ser um numero entre 0 e 100");
     }

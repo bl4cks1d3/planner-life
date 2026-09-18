@@ -13,6 +13,8 @@ import { HabitsModule } from "./habits/habits.module";
 import { GoogleModule } from "./integrations/google/google.module";
 import { P2pBridgeModule } from "./p2p-bridge/p2p-bridge.module";
 import { VaultModule } from "./vault/vault.module";
+import { StudyModule } from "./study/study.module";
+import { SettingsModule } from "./settings/settings.module";
 import { AppController } from "./app.controller";
 
 @Module({
@@ -31,6 +33,8 @@ import { AppController } from "./app.controller";
     GoogleModule,
     P2pBridgeModule,
     VaultModule,
+    StudyModule,
+    SettingsModule,
   ],
   controllers: [AppController],
 })

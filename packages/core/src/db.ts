@@ -55,8 +55,37 @@ CREATE TABLE IF NOT EXISTS subjects (
   name TEXT NOT NULL,
   progress INTEGER NOT NULL DEFAULT 0,
   note TEXT,
+  exam_date TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS study_topics (
+  id TEXT PRIMARY KEY,
+  subject_id TEXT NOT NULL REFERENCES subjects(id),
+  title TEXT NOT NULL,
+  done INTEGER NOT NULL DEFAULT 0,
+  due_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS schedule_blocks (
+  id TEXT PRIMARY KEY,
+  subject_id TEXT NOT NULL REFERENCES subjects(id),
+  day_of_week INTEGER NOT NULL,
+  start_time TEXT NOT NULL,
+  end_time TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS study_sessions (
+  id TEXT PRIMARY KEY,
+  subject_id TEXT REFERENCES subjects(id),
+  duration_minutes INTEGER NOT NULL,
+  started_at TEXT NOT NULL,
+  ended_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS research_lines (
@@ -122,6 +151,12 @@ function migrate(db: DatabaseSync): void {
   };
   if (!hasColumn("papers", "note_path")) {
     db.exec(`ALTER TABLE papers ADD COLUMN note_path TEXT`);
+  }
+  if (!hasColumn("subjects", "exam_date")) {
+    db.exec(`ALTER TABLE subjects ADD COLUMN exam_date TEXT`);
+  }
+  if (!hasColumn("study_topics", "due_at")) {
+    db.exec(`ALTER TABLE study_topics ADD COLUMN due_at TEXT`);
   }
 }
 

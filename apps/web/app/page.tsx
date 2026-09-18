@@ -10,7 +10,10 @@ import {
   getPapers,
   getProjects,
   getResearchLines,
+  getSchedule,
   getServiceHealth,
+  getStudySessions,
+  getStudyTopics,
   getSubjects,
   getTasks,
   getVaultNotes,
@@ -33,6 +36,9 @@ export default async function Home() {
     calendarEvents,
     googleTasks,
     notes,
+    studyTopics,
+    schedule,
+    studySessions,
     health,
   ] = await Promise.all([
     getProjects(),
@@ -49,6 +55,9 @@ export default async function Home() {
     getCalendarEvents(8),
     getGoogleTasks(),
     getVaultNotes(),
+    getStudyTopics(),
+    getSchedule(),
+    getStudySessions(14),
     getServiceHealth(),
   ]);
 
@@ -68,6 +77,9 @@ export default async function Home() {
       calendarEvents={calendarEvents}
       googleTasks={googleTasks}
       notes={notes}
+      studyTopics={studyTopics}
+      schedule={schedule}
+      studySessions={studySessions}
       health={health}
     />
   );

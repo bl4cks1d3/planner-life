@@ -6,8 +6,8 @@ config({ path: resolve(dirname(fileURLToPath(import.meta.url)), "../../../.env")
 import { createPlannerNode, onPlpEvent, publishPlpEvent } from "./node.js";
 import { createHttpBridge } from "./http-bridge.js";
 
-const port = Number(process.env.P2P_TCP_PORT ?? 15000);
-const httpPort = Number(process.env.P2P_HTTP_PORT ?? 15001);
+const port = Number(process.env.P2P_TCP_PORT ?? 4400);
+const httpPort = Number(process.env.P2P_HTTP_PORT ?? 4401);
 const nodeName = process.env.P2P_NODE_NAME ?? "planner-node";
 
 const node = await createPlannerNode({ port, nodeName });

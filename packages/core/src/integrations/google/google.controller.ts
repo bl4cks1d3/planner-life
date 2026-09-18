@@ -40,7 +40,7 @@ export class GoogleController {
   @Get("callback")
   @Redirect()
   async callback(@Query("code") code?: string, @Query("error") error?: string) {
-    const webAppUrl = process.env.WEB_APP_URL ?? "http://localhost:3000";
+    const webAppUrl = process.env.WEB_APP_URL ?? "http://localhost:4300";
     if (error || !code) {
       return { url: `${webAppUrl}/?google=error` };
     }

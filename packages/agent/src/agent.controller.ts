@@ -37,4 +37,20 @@ export class AgentController {
   rejectClaudeCode(@Param("id") id: string) {
     return this.claudeCode.reject(id);
   }
+
+  @Post("claude-code/run")
+  runClaudeCode(@Body() body: { prompt?: string; cwd?: string }) {
+    if (!body?.prompt?.trim()) {
+      throw new BadRequestException("prompt e obrigatorio");
+    }
+    return this.claudeCode.runNow(body.prompt.trim(), body.cwd);
+  }
+
+  @Post("research/request")
+  requestResearch(@Body() body: { theme?: string }) {
+    if (!body?.theme?.trim()) {
+      throw new BadRequestException("theme e obrigatorio");
+    }
+    return this.claudeCode.createResearchRequest(body.theme.trim());
+  }
 }

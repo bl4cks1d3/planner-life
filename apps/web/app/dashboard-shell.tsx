@@ -20,7 +20,10 @@ import {
   type PlannerEvent,
   type Project,
   type ResearchLine,
+  type ScheduleBlock,
   type ServiceHealth,
+  type StudySession,
+  type StudyTopic,
   type Subject,
   type Task,
   type VaultNoteMeta,
@@ -34,9 +37,10 @@ import CrmView from "./views/CrmView";
 import EstudosView from "./views/EstudosView";
 import PesquisaView from "./views/PesquisaView";
 import InboxView from "./views/InboxView";
-import RedeView from "./views/RedeView";
 import MemoriaView from "./views/MemoriaView";
 import NotasView from "./views/NotasView";
+import TerminalView from "./views/TerminalView";
+import SettingsView from "./views/SettingsView";
 import NotificationsBanner from "./notifications-banner";
 
 type ViewId =
@@ -48,8 +52,9 @@ type ViewId =
   | "pesquisa"
   | "inbox"
   | "notas"
+  | "terminal"
   | "memoria"
-  | "rede";
+  | "configuracoes";
 
 const NAV: { id: ViewId; label: string }[] = [
   { id: "hoje", label: "Hoje" },
@@ -60,8 +65,9 @@ const NAV: { id: ViewId; label: string }[] = [
   { id: "pesquisa", label: "Pesquisa" },
   { id: "inbox", label: "Inbox" },
   { id: "notas", label: "Notas" },
+  { id: "terminal", label: "Terminal" },
   { id: "memoria", label: "Memória" },
-  { id: "rede", label: "Rede" },
+  { id: "configuracoes", label: "Configurações" },
 ];
 
 export interface DashboardShellProps {
@@ -79,6 +85,9 @@ export interface DashboardShellProps {
   calendarEvents: CalendarEvent[];
   googleTasks: GoogleTask[];
   notes: VaultNoteMeta[];
+  studyTopics: StudyTopic[];
+  schedule: ScheduleBlock[];
+  studySessions: StudySession[];
   health: ServiceHealth;
 }
 
@@ -98,6 +107,9 @@ export default function DashboardShell(props: DashboardShellProps) {
     calendarEvents,
     googleTasks,
     notes,
+    studyTopics,
+    schedule,
+    studySessions,
     health,
   } = props;
   const router = useRouter();
@@ -126,8 +138,9 @@ export default function DashboardShell(props: DashboardShellProps) {
     pesquisa: `${papers.length} artigos`,
     inbox: String(unhandledCount),
     notas: String(notes.length),
+    terminal: "",
     memoria: String(memoryEntries.length),
-    rede: `${events.length} eventos`,
+    configuracoes: "",
   };
 
   function onChange() {
@@ -297,7 +310,13 @@ export default function DashboardShell(props: DashboardShellProps) {
             )}
             {view === "crm" && <CrmView clients={clients} onChange={onChange} />}
             {view === "estudos" && (
-              <EstudosView subjects={subjects} tasks={tasks} onChange={onChange} />
+              <EstudosView
+                subjects={subjects}
+                topics={studyTopics}
+                schedule={schedule}
+                sessions={studySessions}
+                onChange={onChange}
+              />
             )}
             {view === "pesquisa" && (
               <PesquisaView lines={researchLines} papers={papers} onChange={onChange} />
@@ -313,8 +332,9 @@ export default function DashboardShell(props: DashboardShellProps) {
               />
             )}
             {view === "notas" && <NotasView notes={notes} onChange={onChange} />}
+            {view === "terminal" && <TerminalView />}
             {view === "memoria" && <MemoriaView entries={memoryEntries} onChange={onChange} />}
-            {view === "rede" && <RedeView events={events} health={health} />}
+            {view === "configuracoes" && <SettingsView />}
           </div>
 
           {chatOpen && <ChatPanel onActivity={onChange} />}

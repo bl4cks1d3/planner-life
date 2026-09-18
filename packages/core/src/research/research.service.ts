@@ -1,17 +1,21 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { PlannerDb } from "../db";
 import { PLANNER_DB } from "../database/database.module";
 import { PlannerEventBus } from "../eventBus";
 import { EventsService } from "../events/events.service";
+import { VaultService } from "../vault/vault.service";
 import * as researchRepo from "../repositories/research";
 import type { PaperStatus } from "@planner-life/shared";
 
 @Injectable()
 export class ResearchService {
+  private readonly logger = new Logger(ResearchService.name);
+
   constructor(
     @Inject(PLANNER_DB) private readonly db: PlannerDb,
     private readonly eventsService: EventsService,
-    private readonly eventBus: PlannerEventBus
+    private readonly eventBus: PlannerEventBus,
+    private readonly vault: VaultService
   ) {}
 
   listLines() {
@@ -80,7 +84,16 @@ export class ResearchService {
   }
 
   removePaper(id: string) {
+    const paper = researchRepo.getPaper(this.db, id);
     researchRepo.deletePaper(this.db, id);
+    if (paper?.notePath) {
+      try {
+        this.vault.remove(paper.notePath);
+      } catch (err) {
+        // nao deixa a exclusao do artigo falhar so porque a nota ja sumiu
+        this.logger.warn(`falha ao apagar a nota "${paper.notePath}" do artigo ${id}: ${err instanceof Error ? err.message : err}`);
+      }
+    }
     this.eventsService.record("paper.deleted", { paperId: id });
     this.eventBus.publish("paper.deleted", { paperId: id });
     return { ok: true };

@@ -1,7 +1,7 @@
 const CORE_API_URL = process.env.NEXT_PUBLIC_CORE_API_URL ?? "http://localhost:4000";
 const AGENT_API_URL = process.env.NEXT_PUBLIC_AGENT_API_URL ?? "http://localhost:4100";
 const VOICE_API_URL = process.env.NEXT_PUBLIC_VOICE_API_URL ?? "http://localhost:4200";
-const P2P_HTTP_URL = process.env.NEXT_PUBLIC_P2P_HTTP_URL ?? "http://localhost:15001";
+const P2P_HTTP_URL = process.env.NEXT_PUBLIC_P2P_HTTP_URL ?? "http://localhost:4401";
 
 export interface Project {
   id: string;
@@ -51,8 +51,37 @@ export interface Subject {
   name: string;
   progress: number;
   note?: string;
+  examDate?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface StudyTopic {
+  id: string;
+  subjectId: string;
+  title: string;
+  done: boolean;
+  dueAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScheduleBlock {
+  id: string;
+  subjectId: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  createdAt: string;
+}
+
+export interface StudySession {
+  id: string;
+  subjectId?: string;
+  durationMinutes: number;
+  startedAt: string;
+  endedAt: string;
+  createdAt: string;
 }
 
 export interface ResearchLine {
@@ -255,7 +284,7 @@ export async function getSubjects(): Promise<Subject[]> {
   return res.json();
 }
 
-export async function createSubject(input: { name: string; note?: string }): Promise<Subject> {
+export async function createSubject(input: { name: string; note?: string; examDate?: string }): Promise<Subject> {
   const res = await fetch(`${CORE_API_URL}/subjects`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -265,7 +294,10 @@ export async function createSubject(input: { name: string; note?: string }): Pro
   return res.json();
 }
 
-export async function updateSubject(id: string, input: { progress?: number; note?: string }): Promise<Subject> {
+export async function updateSubject(
+  id: string,
+  input: { progress?: number; note?: string; examDate?: string | null }
+): Promise<Subject> {
   const res = await fetch(`${CORE_API_URL}/subjects/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -278,6 +310,94 @@ export async function updateSubject(id: string, input: { progress?: number; note
 export async function deleteSubject(id: string): Promise<void> {
   const res = await fetch(`${CORE_API_URL}/subjects/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("falha ao excluir disciplina");
+}
+
+export async function getStudyTopics(subjectId?: string): Promise<StudyTopic[]> {
+  const params = new URLSearchParams(subjectId ? { subjectId } : {});
+  const res = await fetch(`${CORE_API_URL}/study/topics?${params.toString()}`, { cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createStudyTopic(input: {
+  subjectId: string;
+  title: string;
+  dueAt?: string;
+}): Promise<StudyTopic> {
+  const res = await fetch(`${CORE_API_URL}/study/topics`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao criar topico");
+  return res.json();
+}
+
+export async function setStudyTopicDone(id: string, done: boolean): Promise<StudyTopic> {
+  const res = await fetch(`${CORE_API_URL}/study/topics/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ done }),
+  });
+  if (!res.ok) throw new Error("falha ao atualizar topico");
+  return res.json();
+}
+
+export async function deleteStudyTopic(id: string): Promise<void> {
+  const res = await fetch(`${CORE_API_URL}/study/topics/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("falha ao excluir topico");
+}
+
+export async function getSchedule(): Promise<ScheduleBlock[]> {
+  const res = await fetch(`${CORE_API_URL}/study/schedule`, { cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createScheduleBlock(input: {
+  subjectId: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+}): Promise<ScheduleBlock> {
+  const res = await fetch(`${CORE_API_URL}/study/schedule`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao criar horario");
+  return res.json();
+}
+
+export async function deleteScheduleBlock(id: string): Promise<void> {
+  const res = await fetch(`${CORE_API_URL}/study/schedule/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("falha ao excluir horario");
+}
+
+export async function getStudySessions(days = 30): Promise<StudySession[]> {
+  const res = await fetch(`${CORE_API_URL}/study/sessions?days=${days}`, { cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function createStudySession(input: {
+  subjectId?: string;
+  durationMinutes: number;
+  startedAt: string;
+  endedAt: string;
+}): Promise<StudySession> {
+  const res = await fetch(`${CORE_API_URL}/study/sessions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error("falha ao registrar sessao de estudo");
+  return res.json();
+}
+
+export async function deleteStudySession(id: string): Promise<void> {
+  const res = await fetch(`${CORE_API_URL}/study/sessions/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("falha ao excluir sessao de estudo");
 }
 
 export async function getResearchLines(): Promise<ResearchLine[]> {
@@ -634,6 +754,8 @@ export interface ClaudeCodeAction {
   createdAt: string;
   output?: string;
   error?: string;
+  kind?: "research";
+  meta?: { theme?: string };
 }
 
 export async function getPendingClaudeCodeActions(): Promise<ClaudeCodeAction[]> {
@@ -651,6 +773,31 @@ export async function confirmClaudeCodeAction(id: string): Promise<ClaudeCodeAct
 export async function rejectClaudeCodeAction(id: string): Promise<ClaudeCodeAction> {
   const res = await fetch(`${AGENT_API_URL}/claude-code/${id}/reject`, { method: "POST" });
   if (!res.ok) throw new Error("falha ao rejeitar o pedido do Claude Code");
+  return res.json();
+}
+
+/** Terminal direto: roda o prompt no Claude Code na hora (sem fila de
+ * aprovacao -- voce mesmo escrevendo e enviando ja e a confirmacao). Pode
+ * demorar ate alguns minutos, dependendo do que o Claude Code precisar fazer. */
+export async function runClaudeCode(prompt: string, cwd?: string): Promise<ClaudeCodeAction> {
+  const res = await fetch(`${AGENT_API_URL}/claude-code/run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, cwd }),
+  });
+  if (!res.ok) throw new Error("falha ao rodar o Claude Code");
+  return res.json();
+}
+
+/** Cria um pedido pendente pro Claude Code pesquisar um tema de verdade --
+ * ainda precisa ser confirmado no card que aparece no chat. */
+export async function requestResearch(theme: string): Promise<ClaudeCodeAction> {
+  const res = await fetch(`${AGENT_API_URL}/research/request`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ theme }),
+  });
+  if (!res.ok) throw new Error("falha ao pedir a pesquisa");
   return res.json();
 }
 
@@ -727,4 +874,26 @@ export async function searchVaultNotes(query: string): Promise<VaultNoteMeta[]> 
   const res = await fetch(`${CORE_API_URL}/vault/search?q=${encodeURIComponent(query)}`, { cache: "no-store" });
   if (!res.ok) return [];
   return res.json();
+}
+
+export interface SettingField {
+  key: string;
+  value: string | null;
+  isSecret: boolean;
+  hasValue: boolean;
+}
+
+export async function getSettings(): Promise<SettingField[]> {
+  const res = await fetch(`${CORE_API_URL}/settings`, { cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function updateSettings(updates: Record<string, string>): Promise<void> {
+  const res = await fetch(`${CORE_API_URL}/settings`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) throw new Error("falha ao salvar configuracoes");
 }
